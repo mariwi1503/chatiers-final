@@ -234,7 +234,7 @@ export function ChatiersApp() {
         <RightRail onChat={() => setChatOpen(true)} />
       </main>
 
-      <MobileBottomNav active="feed" onCompose={() => setComposerOpen(true)} />
+      <MobileBottomNav active="feed" />
 
       <ComposerModal open={composerOpen} onClose={() => setComposerOpen(false)} onSubmit={addPost} />
       <ChatPanel open={chatOpen} onClose={() => setChatOpen(false)} />

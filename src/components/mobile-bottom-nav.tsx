@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, MessageCircle, Newspaper, Plus, UserRound } from "lucide-react";
+import { Bell, MessageCircle, Newspaper, UserRound } from "lucide-react";
 import clsx from "clsx";
 import Link from "next/link";
 import { useState } from "react";
@@ -8,14 +8,9 @@ import { NotificationList } from "@/components/notifications";
 
 type BottomSection = "feed" | "messages" | "profile";
 
-export function MobileBottomNav({ active, onCompose, composeLabel = "Buat", messagesBadge = true }: { active?: BottomSection; onCompose?: () => void; composeLabel?: string; messagesBadge?: boolean }) {
+export function MobileBottomNav({ active, messagesBadge = true }: { active?: BottomSection; messagesBadge?: boolean }) {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [notificationsSeen, setNotificationsSeen] = useState(false);
-  const composeClassName = "-mt-7 flex flex-col items-center gap-1 text-[11px] font-semibold text-slate-500";
-  const composeContent = <>
-    <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-500 to-violet-600 text-white shadow-lg shadow-brand-200 ring-4 ring-white"><Plus className="h-6 w-6" /></span>
-    {composeLabel}
-  </>;
 
   function openNotifications() {
     setNotificationsOpen(true);
@@ -25,14 +20,9 @@ export function MobileBottomNav({ active, onCompose, composeLabel = "Buat", mess
   return (
     <>
       <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 px-3 pb-[max(8px,env(safe-area-inset-bottom))] pt-2 backdrop-blur-xl md:hidden">
-        <div className="grid grid-cols-5 items-end">
+        <div className="grid grid-cols-4 items-end">
           <BottomItem icon={Newspaper} label="Feed" href="/" active={active === "feed"} />
           <BottomItem icon={MessageCircle} label="Pesan" href="/messages" active={active === "messages"} badge={messagesBadge} />
-          {onCompose ? (
-            <button type="button" onClick={onCompose} className={composeClassName}>{composeContent}</button>
-          ) : (
-            <Link href="/?buat=1" className={composeClassName}>{composeContent}</Link>
-          )}
           <BottomItem icon={Bell} label="Notifikasi" active={notificationsOpen} badge={!notificationsSeen} onClick={openNotifications} />
           <BottomItem icon={UserRound} label="Profil" href="/profile" active={active === "profile"} />
         </div>

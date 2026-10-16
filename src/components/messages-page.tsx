@@ -173,7 +173,7 @@ export function MessagesPage() {
         </section>
       </main>
 
-      <MobileBottomNav active="messages" composeLabel="Baru" messagesBadge={false} onCompose={() => setNewChatOpen(true)} />
+      <MobileBottomNav active="messages" messagesBadge={false} />
 
       {newChatOpen && (
         <NewChatSheet
