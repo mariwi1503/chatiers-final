@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { SectionPage } from "@/components/section-page";
+import { MessagesPage } from "@/components/messages-page";
 
 export const metadata: Metadata = {
   title: "Pesan",
@@ -7,5 +7,5 @@ export const metadata: Metadata = {
 };
 
 export default function Page() {
-  return <SectionPage section="messages" />;
+  return <MessagesPage />;
 }

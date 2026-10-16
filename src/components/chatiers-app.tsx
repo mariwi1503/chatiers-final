@@ -14,7 +14,6 @@ import {
   MessageCircle,
   MessagesSquare,
   MoreHorizontal,
-  Newspaper,
   Paperclip,
   PenLine,
   Plus,
@@ -25,7 +24,6 @@ import {
   Sparkles,
   TrendingUp,
   Trash2,
-  UserRound,
   Users,
   X,
 } from "lucide-react";
@@ -34,7 +32,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Avatar } from "@/components/avatar";
 import { AppHeader } from "@/components/app-header";
-import { Logo } from "@/components/logo";
+import { MobileBottomNav } from "@/components/mobile-bottom-nav";
 import { Stories } from "@/components/stories";
 import {
   categories,
@@ -70,12 +68,6 @@ type CommentReplyTarget = {
   author: string;
   text: string;
 };
-
-const navItems = [
-  { id: "feed", label: "Feed", icon: Newspaper, href: "/" },
-  { id: "messages", label: "Pesan", icon: MessageCircle, href: "/messages" },
-  { id: "communities", label: "Komunitas", icon: Users, href: "/communities" },
-];
 
 const categoryStyles: Record<string, { active: string; inactive: string; badge: string }> = {
   all: {
@@ -154,7 +146,6 @@ export function ChatiersApp() {
   const [posts, setPosts] = useState(initialPosts);
   const [composerOpen, setComposerOpen] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
   const filteredPosts = useMemo(() => {
@@ -169,6 +160,14 @@ export function ChatiersApp() {
       )
     );
   }, [activeCategory, posts, searchQuery]);
+
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    if (url.searchParams.get("buat") !== "1") return;
+    setComposerOpen(true);
+    url.searchParams.delete("buat");
+    window.history.replaceState(null, "", url.pathname + url.search + url.hash);
+  }, []);
 
   function showToast(message: string) {
     setToast(message);
@@ -202,7 +201,6 @@ export function ChatiersApp() {
     <div className="min-h-screen pb-20 md:pb-0">
       <AppHeader
         active="feed"
-        onMenu={() => setMobileMenuOpen(true)}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
       />
@@ -236,11 +234,10 @@ export function ChatiersApp() {
         <RightRail onChat={() => setChatOpen(true)} />
       </main>
 
-      <MobileBottomNav onCompose={() => setComposerOpen(true)} />
+      <MobileBottomNav active="feed" onCompose={() => setComposerOpen(true)} />
 
       <ComposerModal open={composerOpen} onClose={() => setComposerOpen(false)} onSubmit={addPost} />
       <ChatPanel open={chatOpen} onClose={() => setChatOpen(false)} />
-      <MobileMenu open={mobileMenuOpen} onClose={() => setMobileMenuOpen(false)} />
 
       {toast && (
         <div className="fixed bottom-24 left-1/2 z-[80] -translate-x-1/2 animate-fade-up rounded-full bg-ink px-5 py-3 text-sm font-semibold text-white shadow-float md:bottom-8">
@@ -650,32 +647,6 @@ function RightRail({ onChat }: { onChat: () => void }) {
   );
 }
 
-function MobileBottomNav({ onCompose }: { onCompose: () => void }) {
-  return (
-    <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 px-3 pb-[max(8px,env(safe-area-inset-bottom))] pt-2 backdrop-blur-xl md:hidden">
-      <div className="grid grid-cols-5 items-end">
-        <BottomItem icon={Newspaper} label="Feed" active />
-        <BottomItem icon={MessageCircle} label="Pesan" href="/messages" badge />
-        <button onClick={onCompose} className="-mt-7 flex flex-col items-center gap-1 text-[11px] font-semibold text-slate-500">
-          <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-500 to-violet-600 text-white shadow-lg shadow-brand-200 ring-4 ring-white"><Plus className="h-6 w-6" /></span>
-          Buat
-        </button>
-        <BottomItem icon={Users} label="Komunitas" href="/communities" />
-        <BottomItem icon={UserRound} label="Profil" href="/profile" />
-      </div>
-    </nav>
-  );
-}
-
-function BottomItem({ icon: Icon, label, active, badge, onClick, href }: { icon: typeof Newspaper; label: string; active?: boolean; badge?: boolean; onClick?: () => void; href?: string }) {
-  const content = <>
-      <span className={clsx("relative flex h-7 w-10 items-center justify-center rounded-full", active && "bg-brand-50")}><Icon className={clsx("h-5 w-5", active && "fill-brand-100")} />{badge && <span className="absolute right-1 top-0 h-2 w-2 rounded-full border border-white bg-rose-500" />}</span>
-      {label}
-    </>;
-  const className = clsx("relative flex flex-col items-center gap-1 py-1 text-[11px] font-semibold", active ? "text-brand-600" : "text-slate-400");
-  return href ? <Link href={href} className={className}>{content}</Link> : <button onClick={onClick} className={className}>{content}</button>;
-}
-
 type ComposerFormState = {
   text: string;
   category: PostCategory;
@@ -986,19 +957,6 @@ function ChatPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
           </div>
         </div>
       </section>
-    </div>
-  );
-}
-
-function MobileMenu({ open, onClose }: { open: boolean; onClose: () => void }) {
-  if (!open) return null;
-  return (
-    <div className="fixed inset-0 z-[70] bg-slate-950/40 lg:hidden" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
-      <aside className="h-full w-[min(320px,88vw)] animate-fade-up overflow-y-auto bg-white p-5 shadow-float">
-        <div className="flex items-center justify-between"><Logo compact className="w-28" /><button onClick={onClose} className="icon-button"><X className="h-5 w-5" /></button></div>
-        <Link href="/profile" onClick={onClose} className="mt-5 flex items-center gap-3 rounded-2xl bg-slate-950 p-4 text-white"><Avatar src={currentUser.avatar} alt={currentUser.name} size="lg" online /><div><p className="text-sm font-bold">{currentUser.name}</p><p className="text-xs text-slate-400">{currentUser.handle}</p></div></Link>
-        <nav className="mt-5 space-y-1">{navItems.map((item, index) => <Link key={item.label} href={item.href} onClick={onClose} className={clsx("flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold", index === 0 ? "bg-brand-50 text-brand-700" : "text-slate-600")}><item.icon className="h-5 w-5" />{item.label}</Link>)}</nav>
-      </aside>
     </div>
   );
 }

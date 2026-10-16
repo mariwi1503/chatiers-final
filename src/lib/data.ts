@@ -366,3 +366,146 @@ export const quickActions = [
   { label: "Jual barang", icon: ShoppingBag, color: "text-violet-600 bg-violet-50" },
   { label: "Bagikan ide", icon: Lightbulb, color: "text-amber-600 bg-amber-50" },
 ];
+
+export type ChatMessageStatus = "sent" | "delivered" | "read";
+
+export type ChatMessageContent =
+  | { kind: "text"; text: string }
+  | { kind: "image"; url: string; caption?: string }
+  | { kind: "voice"; duration: number }
+  | { kind: "file"; name: string; size: number };
+
+export type ChatMessage = {
+  id: string;
+  from: "me" | "them";
+  time: string;
+  status?: ChatMessageStatus;
+  author?: { name: string; avatar: string };
+} & ChatMessageContent;
+
+export type Conversation = {
+  id: string;
+  name: string;
+  avatar?: string;
+  role: string;
+  isGroup?: boolean;
+  members?: number;
+  online?: boolean;
+  lastSeen?: string;
+  unread: number;
+  time: string;
+  messages: ChatMessage[];
+};
+
+export const conversations: Conversation[] = [
+  {
+    id: "nadia",
+    name: "Nadia Putri",
+    avatar: "https://i.pravatar.cc/160?img=47",
+    role: "Product Designer",
+    online: true,
+    unread: 2,
+    time: "09:40",
+    messages: [
+      { id: "n-1", from: "them", kind: "text", text: "Hai Arya, lagi apa nih?", time: "09:12" },
+      { id: "n-2", from: "me", kind: "text", text: "Lagi ngerjain desain fitur chat nih. Kamu gimana?", time: "09:14", status: "read" },
+      { id: "n-3", from: "them", kind: "text", text: "Wah keren! Bisa lihat hasilnya?", time: "09:15" },
+      { id: "n-4", from: "me", kind: "image", url: "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=900&q=80", time: "09:16", status: "read" },
+      { id: "n-5", from: "me", kind: "text", text: "Ini salah satu konsepnya", time: "09:16", status: "read" },
+      { id: "n-6", from: "them", kind: "text", text: "Wah bagus banget!", time: "09:17" },
+      { id: "n-7", from: "them", kind: "text", text: "Kapan selesai?", time: "09:17" },
+      { id: "n-8", from: "me", kind: "text", text: "Mungkin minggu ini ya", time: "09:18", status: "read" },
+      { id: "n-9", from: "them", kind: "voice", duration: 12, time: "09:19" },
+      { id: "n-10", from: "them", kind: "text", text: "Oke, sampai nanti ya!", time: "09:40" },
+    ],
+  },
+  {
+    id: "rian",
+    name: "Rian Ardiansyah",
+    avatar: "https://i.pravatar.cc/160?img=11",
+    role: "Owner at Sneakerhead ID",
+    online: true,
+    unread: 0,
+    time: "08:12",
+    messages: [
+      { id: "r-1", from: "me", kind: "text", text: "Kak, Air Jordan-nya masih ada?", time: "08:02", status: "read" },
+      { id: "r-2", from: "them", kind: "text", text: "Masih ada, Arya. Ini foto detail sol-nya ya.", time: "08:10" },
+      { id: "r-3", from: "them", kind: "image", url: "https://images.unsplash.com/photo-1610022065010-5b4a4db9273e?auto=format&fit=crop&w=900&q=80", time: "08:12" },
+    ],
+  },
+  {
+    id: "chatiers-team",
+    name: "Chatiers Team",
+    role: "Grup resmi",
+    isGroup: true,
+    members: 128,
+    unread: 1,
+    time: "Kemarin",
+    messages: [
+      { id: "c-1", from: "them", kind: "text", text: "Pengumuman: fitur baru sudah bisa dicoba! Sekarang kamu bisa mengirim pesan suara dan gambar langsung dari chat.", time: "16:30", author: { name: "Chatiers", avatar: "https://i.pravatar.cc/160?img=5" } },
+    ],
+  },
+  {
+    id: "siti",
+    name: "Siti Rahma",
+    avatar: "https://i.pravatar.cc/160?img=32",
+    role: "Software Engineer",
+    online: false,
+    lastSeen: "1 jam lalu",
+    unread: 0,
+    time: "Kemarin",
+    messages: [
+      { id: "s-1", from: "them", kind: "text", text: "Terima kasih masukannya di utas kemarin!", time: "19:20" },
+      { id: "s-2", from: "me", kind: "text", text: "Sama-sama, Siti. Kapan kita ketemu lagi?", time: "19:24", status: "delivered" },
+    ],
+  },
+  {
+    id: "projek-design",
+    name: "Projek Design",
+    role: "Grup kerja",
+    isGroup: true,
+    members: 6,
+    unread: 0,
+    time: "Kemarin",
+    messages: [
+      { id: "p-1", from: "me", kind: "text", text: "Tolong kirim file revisinya ke grup ya.", time: "14:02", status: "read" },
+      { id: "p-2", from: "them", kind: "file", name: "Revisi-Onboarding-v3.fig", size: 4_820_000, time: "14:20", author: { name: "Dimas", avatar: "https://i.pravatar.cc/160?img=8" } },
+      { id: "p-3", from: "them", kind: "text", text: "File sudah aku kirim", time: "14:21", author: { name: "Dimas", avatar: "https://i.pravatar.cc/160?img=8" } },
+    ],
+  },
+  {
+    id: "dimas",
+    name: "Dimas Surya",
+    avatar: "https://i.pravatar.cc/160?img=8",
+    role: "Product Builder",
+    online: true,
+    unread: 0,
+    time: "Sen",
+    messages: [
+      { id: "d-1", from: "me", kind: "text", text: "Ide skill-swap kemarin keren, aku mau ikut uji coba.", time: "10:05", status: "read" },
+      { id: "d-2", from: "them", kind: "text", text: "Siap, terima kasih!", time: "10:11" },
+    ],
+  },
+  {
+    id: "maya",
+    name: "Maya Lestari",
+    avatar: "https://i.pravatar.cc/160?img=45",
+    role: "Frontend Engineer",
+    online: false,
+    lastSeen: "kemarin",
+    unread: 0,
+    time: "Sen",
+    messages: [{ id: "m-1", from: "them", kind: "voice", duration: 27, time: "08:44" }],
+  },
+  {
+    id: "fikri",
+    name: "Fikri Ramadhan",
+    avatar: "https://i.pravatar.cc/160?img=68",
+    role: "Community Builder",
+    online: false,
+    lastSeen: "3 hari lalu",
+    unread: 0,
+    time: "Min",
+    messages: [{ id: "f-1", from: "them", kind: "text", text: "Baik, nanti aku cek dulu.", time: "20:15" }],
+  },
+];
