@@ -3,9 +3,11 @@
 import { Bell, ChevronDown, Menu, MessageCircle, Newspaper, Search, Users } from "lucide-react";
 import clsx from "clsx";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Avatar } from "@/components/avatar";
 import { Logo } from "@/components/logo";
+import { MobileMenu } from "@/components/mobile-menu";
+import { NotificationList } from "@/components/notifications";
 import { currentUser } from "@/lib/data";
 
 export type HeaderSection = "feed" | "messages" | "communities" | "saved" | "profile";
@@ -16,10 +18,22 @@ const headerNavigation = [
   { id: "communities", label: "Komunitas", href: "/communities", icon: Users },
 ] as const;
 
-export function AppHeader({ active, searchQuery, onSearchChange, searchPlaceholder = "Cari di Chatiers", onMenu }: { active: HeaderSection; searchQuery?: string; onSearchChange?: (value: string) => void; searchPlaceholder?: string; onMenu?: () => void }) {
+export function AppHeader({ active, searchQuery, onSearchChange, searchPlaceholder = "Cari di Chatiers" }: { active: HeaderSection; searchQuery?: string; onSearchChange?: (value: string) => void; searchPlaceholder?: string }) {
   const [localSearch, setLocalSearch] = useState("");
   const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const searchInput = useRef<HTMLInputElement>(null);
   const value = searchQuery ?? localSearch;
+
+  useEffect(() => {
+    if (searchOpen) searchInput.current?.focus();
+  }, [searchOpen]);
+
+  function closeSearch() {
+    changeSearch("");
+    setSearchOpen(false);
+  }
 
   function changeSearch(nextValue: string) {
     if (onSearchChange) onSearchChange(nextValue);
@@ -27,24 +41,28 @@ export function AppHeader({ active, searchQuery, onSearchChange, searchPlacehold
   }
 
   return (
+    <>
     <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/90 backdrop-blur-xl">
-      <div className="mx-auto flex h-16 max-w-[1200px] items-center gap-4 px-4">
-        {onMenu ? (
-          <button type="button" className="icon-button -ml-2 lg:hidden" onClick={onMenu} aria-label="Buka menu"><Menu className="h-5 w-5" /></button>
-        ) : (
-          <span className="-ml-2 h-10 w-10 shrink-0 lg:hidden" aria-hidden="true" />
-        )}
+      <div className="relative mx-auto flex h-16 max-w-[1200px] items-center gap-4 px-4">
+        <button type="button" className="icon-button -ml-2 shrink-0 lg:hidden" onClick={() => setMenuOpen(true)} aria-label="Buka menu" aria-expanded={menuOpen}><Menu className="h-5 w-5" /></button>
 
-        <Link href="/" aria-label="Kembali ke feed" className="flex shrink-0 items-center">
+        <Link href="/" aria-label="Kembali ke feed" className="flex shrink-0 items-center max-md:absolute max-md:left-1/2 max-md:-translate-x-1/2">
           <Logo compact className="w-[120px] shrink-0 md:w-[160px]" />
         </Link>
 
-        <form className="relative min-w-0 max-w-[280px] flex-1" role="search" onSubmit={(event) => event.preventDefault()}>
+        <form className={clsx("min-w-0 max-w-[280px] flex-1 md:relative md:block", searchOpen ? "max-md:absolute max-md:inset-0 max-md:z-10 max-md:flex max-md:max-w-none max-md:items-center max-md:gap-2 max-md:bg-white max-md:px-4" : "hidden")} role="search" onSubmit={(event) => event.preventDefault()}>
+          <div className="relative min-w-0 flex-1">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-          <input type="search" value={value} onChange={(event) => changeSearch(event.target.value)} placeholder={searchPlaceholder} aria-label={searchPlaceholder} className="focus-ring h-10 w-full rounded-full border border-slate-200 bg-slate-100/80 pl-9 pr-4 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 hover:bg-slate-100 focus:border-brand-300 focus:bg-white" />
+          <input ref={searchInput} type="search" value={value} onKeyDown={(event) => event.key === "Escape" && closeSearch()} onChange={(event) => changeSearch(event.target.value)} placeholder={searchPlaceholder} aria-label={searchPlaceholder} className="focus-ring h-10 w-full rounded-full border border-slate-200 bg-slate-100/80 pl-9 pr-4 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 hover:bg-slate-100 focus:border-brand-300 focus:bg-white" />
+          </div>
+          <button type="button" onClick={closeSearch} className="shrink-0 rounded-full px-2 py-2 text-sm font-semibold text-brand-600 md:hidden">Batal</button>
         </form>
 
         <div className="ml-auto flex h-full items-center gap-1">
+          <button type="button" className="icon-button relative -mr-2 md:hidden" onClick={() => setSearchOpen(true)} aria-label={searchPlaceholder} aria-expanded={searchOpen}>
+            <Search className="h-5 w-5" />
+            {value && <span className="absolute right-2 top-2 h-2 w-2 rounded-full border-2 border-white bg-brand-600" />}
+          </button>
           <nav className="hidden h-full items-stretch lg:flex" aria-label="Navigasi utama">
             {headerNavigation.map((item) => {
               const isActive = item.id === active;
@@ -58,7 +76,7 @@ export function AppHeader({ active, searchQuery, onSearchChange, searchPlacehold
             })}
           </nav>
 
-          <div className="relative h-full min-w-10 lg:min-w-[66px] xl:min-w-[74px]">
+          <div className="relative hidden h-full min-w-10 md:block lg:min-w-[66px] xl:min-w-[74px]">
             <button type="button" className="group flex h-full w-full flex-col items-center justify-center gap-1 px-1.5 text-[11px] font-bold text-slate-500 transition hover:text-slate-950" onClick={() => setNotificationsOpen((current) => !current)} aria-label="Notifikasi" aria-expanded={notificationsOpen}>
               <span className="relative flex h-7 w-10 items-center justify-center rounded-lg transition group-hover:bg-slate-100"><Bell className="h-[17px] w-[17px]" /><span className="absolute right-0.5 top-0 h-2 w-2 rounded-full border-2 border-white bg-rose-500" /></span>
               <span className="hidden lg:inline">Notifikasi</span>
@@ -74,18 +92,11 @@ export function AppHeader({ active, searchQuery, onSearchChange, searchPlacehold
         </div>
       </div>
     </header>
+    <MobileMenu open={menuOpen} active={active} onClose={() => setMenuOpen(false)} />
+    </>
   );
 }
 
 function HeaderNotifications() {
-  return (
-    <div className="absolute right-0 top-14 w-[min(340px,calc(100vw-24px))] animate-fade-up rounded-2xl border border-slate-200 bg-white p-2 shadow-float">
-      <div className="flex items-center justify-between px-3 py-2"><h3 className="font-bold text-slate-900">Notifikasi</h3><button className="text-xs font-semibold text-brand-600">Tandai dibaca</button></div>
-      {[
-        ["Nadia Putri", "menyukai ide yang kamu bagikan.", "2m", "https://i.pravatar.cc/160?img=47"],
-        ["TechCorp", "mengunggah lowongan baru untukmu.", "18m", "https://i.pravatar.cc/160?img=13"],
-        ["Siti Rahma", "membalas komentarmu.", "1j", "https://i.pravatar.cc/160?img=32"],
-      ].map(([name, text, time, avatar]) => <button key={name} className="flex w-full gap-3 rounded-xl p-3 text-left hover:bg-slate-50"><Avatar src={avatar} alt={name} /><span className="min-w-0 text-xs leading-5 text-slate-600"><b className="text-slate-900">{name}</b> {text}<span className="block font-medium text-brand-600">{time}</span></span></button>)}
-    </div>
-  );
+  return <NotificationList className="absolute right-0 top-14 w-[min(340px,calc(100vw-24px))] animate-fade-up rounded-2xl border border-slate-200 bg-white p-2 shadow-float" />;
 }

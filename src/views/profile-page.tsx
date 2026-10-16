@@ -14,20 +14,16 @@ import {
   MapPin,
   MessageCircle,
   MoreHorizontal,
-  Newspaper,
   Pencil,
   Plus,
   Share2,
-  UserRound,
-  Users,
   X,
 } from "lucide-react";
-import Link from "next/link";
 import { useState } from "react";
 import clsx from "clsx";
 import { Avatar } from "@/components/avatar";
 import { AppHeader } from "@/components/app-header";
-import { Logo } from "@/components/logo";
+import { MobileBottomNav } from "@/components/mobile-bottom-nav";
 import { currentUser, suggestions } from "@/lib/data";
 
 const profilePosts = [
@@ -52,13 +48,6 @@ const profilePosts = [
   },
 ];
 
-const sideNav = [
-  { label: "Feed", icon: Newspaper, href: "/" },
-  { label: "Pesan", icon: MessageCircle, href: "/messages" },
-  { label: "Komunitas", icon: Users, href: "/communities" },
-  { label: "Profil", icon: UserRound, href: "/profile" },
-];
-
 type ProfileState = {
   name: string;
   handle: string;
@@ -77,7 +66,6 @@ export function ProfilePage() {
   });
   const [activeTab, setActiveTab] = useState("postingan");
   const [editOpen, setEditOpen] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
   function showToast(message: string) {
@@ -87,7 +75,7 @@ export function ProfilePage() {
 
   return (
     <div className="min-h-screen pb-20 md:pb-8">
-      <AppHeader active="profile" onMenu={() => setMenuOpen(true)} />
+      <AppHeader active="profile" />
 
       <main className="mx-auto grid w-full max-w-[1200px] grid-cols-1 gap-4 px-0 md:px-4 md:pt-4 lg:grid-cols-[minmax(0,1fr)_280px] xl:grid-cols-[minmax(0,1fr)_300px]">
         <section className="min-w-0">
@@ -118,8 +106,7 @@ export function ProfilePage() {
         <ProfileRightRail onToast={showToast} />
       </main>
 
-      <ProfileBottomNav />
-      <ProfileMobileMenu open={menuOpen} onClose={() => setMenuOpen(false)} />
+      <MobileBottomNav active="profile" />
       <EditProfileModal
         open={editOpen}
         profile={profile}
@@ -252,41 +239,6 @@ function ProfileRightRail({ onToast }: { onToast: (message: string) => void }) {
 function Suggestion({ person, onToast }: { person: (typeof suggestions)[number]; onToast: (message: string) => void }) {
   const [connected, setConnected] = useState(false);
   return <div className="flex items-center gap-3"><Avatar src={person.avatar} alt={person.name} /><div className="min-w-0 flex-1"><p className="truncate text-xs font-extrabold">{person.name}</p><p className="truncate text-[10px] text-slate-400">{person.role}</p></div><button onClick={() => { setConnected((value) => !value); onToast(connected ? "Koneksi dibatalkan" : `Undangan dikirim ke ${person.name}`); }} className={clsx("flex h-8 w-8 items-center justify-center rounded-full border transition", connected ? "border-emerald-200 bg-emerald-50 text-emerald-600" : "border-brand-200 text-brand-600 hover:bg-brand-50")} aria-label={`Hubungkan dengan ${person.name}`}>{connected ? <Check className="h-4 w-4" /> : <Plus className="h-4 w-4" />}</button></div>;
-}
-
-function ProfileBottomNav() {
-  return (
-    <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 px-3 pb-[max(8px,env(safe-area-inset-bottom))] pt-2 backdrop-blur-xl md:hidden">
-      <div className="grid grid-cols-4">
-        {sideNav.map((item) => {
-          const active = item.label === "Profil";
-          const content = <><span className={clsx("flex h-7 w-10 items-center justify-center rounded-full", active && "bg-brand-50")}><item.icon className="h-5 w-5" /></span>{item.label}</>;
-          const classes = clsx("flex flex-col items-center gap-1 py-1 text-[11px] font-semibold", active ? "text-brand-600" : "text-slate-400");
-          return item.href ? <Link key={item.label} href={item.href} className={classes}>{content}</Link> : <button key={item.label} className={classes}>{content}</button>;
-        })}
-      </div>
-    </nav>
-  );
-}
-
-function ProfileMobileMenu({ open, onClose }: { open: boolean; onClose: () => void }) {
-  if (!open) return null;
-  return (
-    <div className="fixed inset-0 z-[70] bg-slate-950/40 lg:hidden" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
-      <aside className="h-full w-[min(320px,88vw)] animate-fade-up bg-white p-5 shadow-float">
-        <div className="flex items-center justify-between"><Logo compact className="w-28" /><button onClick={onClose} className="icon-button"><X className="h-5 w-5" /></button></div>
-        <div className="mt-5 flex items-center gap-3 rounded-2xl bg-slate-950 p-4 text-white"><Avatar src={currentUser.avatar} alt={currentUser.name} size="lg" online /><div><p className="text-sm font-bold">{currentUser.name}</p><p className="text-xs text-slate-400">{currentUser.handle}</p></div></div>
-        <nav className="mt-5 space-y-1">
-          {sideNav.map((item) => {
-            const active = item.label === "Profil";
-            const content = <><item.icon className="h-5 w-5" />{item.label}</>;
-            const classes = clsx("flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold", active ? "bg-brand-50 text-brand-700" : "text-slate-600");
-            return item.href ? <Link key={item.label} href={item.href} onClick={onClose} className={classes}>{content}</Link> : <button key={item.label} className={classes}>{content}</button>;
-          })}
-        </nav>
-      </aside>
-    </div>
-  );
 }
 
 function EditProfileModal({ open, profile, onClose, onSave }: { open: boolean; profile: ProfileState; onClose: () => void; onSave: (value: ProfileState) => void }) {

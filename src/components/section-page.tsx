@@ -3,34 +3,18 @@
 import {
   Bookmark,
   Check,
-  MessageCircle,
   MoreHorizontal,
-  Newspaper,
   Search,
   Send,
-  UserRound,
-  Users,
 } from "lucide-react";
 import clsx from "clsx";
-import Link from "next/link";
 import { useState, type FormEvent } from "react";
 import { Avatar } from "@/components/avatar";
 import { AppHeader } from "@/components/app-header";
+import { MobileBottomNav } from "@/components/mobile-bottom-nav";
 import { contacts, posts as initialPosts, type Post } from "@/lib/data";
 
 export type SectionKind = "messages" | "communities" | "saved";
-
-const headerNavigation = [
-  { id: "feed", label: "Feed", href: "/", icon: Newspaper },
-  { id: "messages", label: "Pesan", href: "/messages", icon: MessageCircle },
-  { id: "communities", label: "Komunitas", href: "/communities", icon: Users },
-] as const;
-
-const mobileNavigation = [
-  ...headerNavigation,
-  { id: "saved", label: "Tersimpan", href: "/saved", icon: Bookmark },
-  { id: "profile", label: "Profil", href: "/profile", icon: UserRound },
-] as const;
 
 const communities = [
   { id: 1, name: "Product Design Indonesia", description: "Diskusi desain produk, riset, dan pengembangan karier.", members: "12,8 rb anggota", icon: "✦", color: "from-violet-500 to-brand-600" },
@@ -57,17 +41,7 @@ export function SectionPage({ section }: { section: SectionKind }) {
         {section === "saved" && <SavedSection query={query} />}
       </main>
 
-      <nav className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-5 border-t border-slate-200 bg-white/95 px-2 pb-[max(8px,env(safe-area-inset-bottom))] pt-2 backdrop-blur-xl md:hidden">
-        {mobileNavigation.map((item) => {
-          const active = item.id === section;
-          return (
-            <Link key={item.id} href={item.href} aria-current={active ? "page" : undefined} className={clsx("flex flex-col items-center gap-1 py-1 text-[10px] font-semibold", active ? "text-brand-600" : "text-slate-400")}>
-              <span className={clsx("flex h-7 w-10 items-center justify-center rounded-full", active && "bg-brand-50")}><item.icon className="h-5 w-5" /></span>
-              {item.label}
-            </Link>
-          );
-        })}
-      </nav>
+      <MobileBottomNav />
     </div>
   );
 }
