@@ -3,18 +3,16 @@
 import {
   Bookmark,
   Check,
-  MoreHorizontal,
   Search,
-  Send,
 } from "lucide-react";
 import clsx from "clsx";
-import { useState, type FormEvent } from "react";
+import { useState } from "react";
 import { Avatar } from "@/components/avatar";
 import { AppHeader } from "@/components/app-header";
 import { MobileBottomNav } from "@/components/mobile-bottom-nav";
-import { contacts, posts as initialPosts, type Post } from "@/lib/data";
+import { posts as initialPosts, type Post } from "@/lib/data";
 
-export type SectionKind = "messages" | "communities" | "saved";
+export type SectionKind = "communities" | "saved";
 
 const communities = [
   { id: 1, name: "Product Design Indonesia", description: "Diskusi desain produk, riset, dan pengembangan karier.", members: "12,8 rb anggota", icon: "✦", color: "from-violet-500 to-brand-600" },
@@ -36,52 +34,12 @@ export function SectionPage({ section }: { section: SectionKind }) {
       />
 
       <main className="mx-auto w-full max-w-[1200px] px-0 py-0 md:px-4 md:pt-4">
-        {section === "messages" && <MessagesSection query={query} />}
         {section === "communities" && <CommunitiesSection query={query} />}
         {section === "saved" && <SavedSection query={query} />}
       </main>
 
       <MobileBottomNav />
     </div>
-  );
-}
-
-function MessagesSection({ query }: { query: string }) {
-  const [selectedName, setSelectedName] = useState(contacts[0].name);
-  const [message, setMessage] = useState("");
-  const [sent, setSent] = useState<string[]>([]);
-  const selected = contacts.find((item) => item.name === selectedName) ?? contacts[0];
-  const normalizedQuery = query.trim().toLocaleLowerCase("id-ID");
-  const filteredContacts = contacts.filter((item) => [item.name, item.role].some((value) => value.toLocaleLowerCase("id-ID").includes(normalizedQuery)));
-
-  function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!message.trim()) return;
-    setSent((items) => [...items, message.trim()]);
-    setMessage("");
-  }
-
-  return (
-    <section className="grid min-h-[calc(100vh-105px)] overflow-hidden bg-white md:min-h-[680px] md:grid-cols-[300px_minmax(0,1fr)] md:rounded-3xl md:border md:border-slate-200 md:shadow-card">
-      <aside className="border-b border-slate-200 p-4 md:border-b-0 md:border-r">
-        <div className="flex items-center justify-between"><div><h1 className="text-lg font-black">Pesan</h1><p className="text-[11px] text-slate-400">Percakapan terbarumu</p></div><button className="icon-button"><MoreHorizontal className="h-5 w-5" /></button></div>
-        <div className="mt-4 space-y-1">
-          {filteredContacts.map((contact) => <button key={contact.name} onClick={() => setSelectedName(contact.name)} className={clsx("flex w-full items-center gap-3 rounded-xl p-2.5 text-left transition", selected.name === contact.name ? "bg-brand-50" : "hover:bg-slate-50")}><Avatar src={contact.avatar} alt={contact.name} size="sm" online={contact.online} /><span className="min-w-0 flex-1"><b className="block truncate text-xs">{contact.name}</b><span className="block truncate text-[10px] text-slate-400">{contact.role}</span></span></button>)}
-          {filteredContacts.length === 0 && <p className="py-8 text-center text-xs text-slate-400">Kontak tidak ditemukan.</p>}
-        </div>
-      </aside>
-
-      <div className="flex min-h-[480px] flex-col">
-        <header className="flex h-16 items-center gap-3 border-b border-slate-200 px-4"><Avatar src={selected.avatar} alt={selected.name} size="sm" online={selected.online} /><div><p className="text-sm font-extrabold">{selected.name}</p><p className={clsx("text-[10px]", selected.online ? "text-emerald-500" : "text-slate-400")}>{selected.online ? "Aktif sekarang" : "Sedang offline"}</p></div></header>
-        <div className="flex flex-1 flex-col gap-3 overflow-y-auto bg-slate-50/60 p-4">
-          <p className="mx-auto rounded-full bg-white px-3 py-1 text-[9px] font-semibold text-slate-400 shadow-sm">Hari ini</p>
-          <div className="flex items-end gap-2"><Avatar src={selected.avatar} alt={selected.name} size="sm" /><p className="max-w-[76%] rounded-2xl rounded-bl-md bg-white px-4 py-3 text-xs leading-5 text-slate-700 shadow-sm">Hai Arya! Senang bisa terhubung denganmu di Chatiers 👋</p></div>
-          <div className="flex justify-end"><p className="max-w-[76%] rounded-2xl rounded-br-md bg-brand-600 px-4 py-3 text-xs leading-5 text-white">Hai! Senang juga bisa terhubung. Apa kabar?</p></div>
-          {sent.map((text, index) => <div key={`${text}-${index}`} className="flex justify-end"><p className="max-w-[76%] rounded-2xl rounded-br-md bg-brand-600 px-4 py-3 text-xs leading-5 text-white">{text}</p></div>)}
-        </div>
-        <form onSubmit={submit} className="flex items-center gap-2 border-t border-slate-200 bg-white p-3"><input value={message} onChange={(event) => setMessage(event.target.value)} placeholder={`Kirim pesan ke ${selected.name.split(" ")[0]}...`} className="min-w-0 flex-1 rounded-2xl bg-slate-100 px-4 py-3 text-xs outline-none focus:ring-2 focus:ring-brand-100" /><button type="submit" disabled={!message.trim()} className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-600 text-white disabled:bg-slate-200" aria-label="Kirim pesan"><Send className="h-4 w-4" /></button></form>
-      </div>
-    </section>
   );
 }
 
