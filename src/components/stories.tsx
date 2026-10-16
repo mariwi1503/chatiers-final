@@ -186,17 +186,7 @@ export function Stories({ onToast }: { onToast: (message: string) => void }) {
 
   return (
     <>
-      <section aria-labelledby="stories-title" className="border-b border-slate-100 bg-white px-4 py-3.5 md:rounded-2xl md:border md:border-slate-200/80 md:shadow-card">
-        <div className="mb-3 flex items-center justify-between">
-          <div>
-            <h2 id="stories-title" className="text-xs font-extrabold text-slate-900">Cerita</h2>
-            <p className="mt-0.5 text-[10px] text-slate-400">Kabar singkat dari koneksimu</p>
-          </div>
-          <button type="button" onClick={() => setComposerOpen(true)} className="focus-ring rounded-full px-3 py-1.5 text-[10px] font-bold text-brand-600 transition hover:bg-brand-50">
-            + Buat cerita
-          </button>
-        </div>
-
+      <section aria-label="Cerita" className="border-b border-slate-100 bg-white px-4 py-3.5 md:rounded-2xl md:border md:border-slate-200/80 md:shadow-card">
         <div className="flex gap-3.5 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {storyGroups.map((story, groupIndex) => {
             const hasStories = story.items.length > 0;
