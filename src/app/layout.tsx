@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { StorefrontProvider } from "@/components/storefront-provider";
 
 export const metadata: Metadata = {
   title: {
@@ -48,8 +49,8 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="id">
-      <body>{children}</body>
+    <html lang="id" data-scroll-behavior="smooth">
+      <body><StorefrontProvider>{children}</StorefrontProvider></body>
     </html>
   );
 }

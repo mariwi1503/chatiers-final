@@ -35,12 +35,13 @@ import { Avatar } from "@/components/avatar";
 import { AppHeader } from "@/components/app-header";
 import { MobileBottomNav } from "@/components/mobile-bottom-nav";
 import { Stories } from "@/components/stories";
+import { useStorefront } from "@/components/storefront-provider";
+import { ProductReference } from "@/components/product-reference";
 import {
   categories,
   contacts,
   currentUser,
   postCategories,
-  posts as initialPosts,
   quickActions,
   suggestions,
   trending,
@@ -53,6 +54,7 @@ import {
   type PostImage,
   type PricingType,
 } from "@/lib/data";
+import { findUserByName, getProfileHref } from "@/lib/users";
 
 type ComposerPayload = {
   category: PostCategory;
@@ -149,7 +151,7 @@ function countLoadedComments(comments: PostComment[]) {
 export function ChatiersApp() {
   const [activeCategory, setActiveCategory] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
-  const [posts, setPosts] = useState(initialPosts);
+  const { posts, setPosts, findProduct } = useStorefront();
   const [composerOpen, setComposerOpen] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
@@ -164,12 +166,13 @@ export function ChatiersApp() {
 
     if (!query) return categoryPosts;
 
-    return categoryPosts.filter((post) =>
-      [post.author, post.role, post.text, getPostCategoryLabel(post.category)].some((value) =>
+    return categoryPosts.filter((post) => {
+      const product = post.productId ? findProduct(post.productId)?.product : undefined;
+      return [post.author, post.role, post.text, getPostCategoryLabel(post.category), product?.name ?? "", product?.category ?? ""].some((value) =>
         value.toLocaleLowerCase("id-ID").includes(query)
-      )
-    );
-  }, [activeCategory, posts, searchQuery]);
+      );
+    });
+  }, [activeCategory, posts, findProduct, searchQuery]);
 
   useEffect(() => {
     const url = new URL(window.location.href);
@@ -479,15 +482,16 @@ function PostCard({ post, index, onOpen, onLike, onSave, onShare }: { post: Post
 }
 
 function PostContent({ post, authorRef }: { post: Post; authorRef?: React.Ref<HTMLDivElement> }) {
+  const authorProfile = findUserByName(post.author);
   const postImages = post.images ?? (post.image ? [{ id: `legacy-${post.id}`, name: "Lampiran postingan", url: post.image }] : []);
 
   return (
     <>
       <div ref={authorRef} className="flex items-start gap-3">
-        <Avatar src={post.avatar} alt={post.author} size="lg" />
+        {authorProfile ? <Link href={getProfileHref(authorProfile)} aria-label={`Lihat profil ${post.author}`} className="focus-ring shrink-0 rounded-full"><Avatar src={post.avatar} alt={post.author} size="lg" /></Link> : <Avatar src={post.avatar} alt={post.author} size="lg" />}
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5">
-            <h3 className="truncate text-sm font-bold text-slate-900">{post.author}</h3>
+            <h3 className="truncate text-sm font-bold text-slate-900">{authorProfile ? <Link href={getProfileHref(authorProfile)} className="focus-ring rounded hover:text-brand-600 hover:underline">{post.author}</Link> : post.author}</h3>
             {post.id === 2 && <span className="flex h-3.5 w-3.5 items-center justify-center rounded-full bg-brand-600 text-[8px] font-bold text-white">✓</span>}
             <span className="shrink-0 text-[10px] font-medium text-slate-400">· {formatPostTime(post.time)}</span>
           </div>
@@ -499,7 +503,7 @@ function PostContent({ post, authorRef }: { post: Post; authorRef?: React.Ref<HT
 
       <p className="mt-3.5 whitespace-pre-wrap text-[13px] leading-6 text-slate-650 md:text-sm">{post.text}</p>
 
-      <PostDetailsPanel details={post.details} />
+      {post.productId ? <ProductReference productId={post.productId} /> : <PostDetailsPanel details={post.details} />}
 
       {post.location && (
         <div className="mt-3 flex items-center gap-2 text-xs font-semibold text-slate-500">
