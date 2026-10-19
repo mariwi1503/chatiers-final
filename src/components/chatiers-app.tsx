@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  ArrowLeft,
   Bookmark,
   CalendarDays,
   ChevronDown,
@@ -136,6 +137,11 @@ function normalizeUrl(value: string) {
   return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
 }
 
+// Matches Tailwind's `md` breakpoint: below it the detail is a pushed full-screen layer, above it it lives in the feed column.
+function isDesktop() {
+  return window.matchMedia("(min-width: 768px)").matches;
+}
+
 function countLoadedComments(comments: PostComment[]) {
   return comments.reduce((total, item) => total + 1 + (item.replies?.length ?? 0), 0);
 }
@@ -147,6 +153,10 @@ export function ChatiersApp() {
   const [composerOpen, setComposerOpen] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const [detail, setDetail] = useState<{ id: number; focusComment: boolean } | null>(null);
+  const [detailClosing, setDetailClosing] = useState(false);
+  const detailCloseTimerRef = useRef<number | undefined>(undefined);
+  const feedScrollRef = useRef(0);
 
   const filteredPosts = useMemo(() => {
     const categoryPosts = activeCategory === "all" ? posts : posts.filter((post) => post.category === activeCategory);
@@ -168,6 +178,90 @@ export function ChatiersApp() {
     url.searchParams.delete("buat");
     window.history.replaceState(null, "", url.pathname + url.search + url.hash);
   }, []);
+
+  useEffect(() => {
+    function syncDetailFromUrl() {
+      const id = Number(new URL(window.location.href).searchParams.get("post"));
+      window.clearTimeout(detailCloseTimerRef.current);
+      if (id) {
+        setDetailClosing(false);
+        setDetail((current) => (current?.id === id ? current : { id, focusComment: false }));
+        return;
+      }
+      setDetailClosing(true);
+      // On desktop the feed was hidden behind the detail, so put the reader back where they left it.
+      if (isDesktop()) window.requestAnimationFrame(() => window.scrollTo(0, feedScrollRef.current));
+      detailCloseTimerRef.current = window.setTimeout(() => {
+        setDetail(null);
+        setDetailClosing(false);
+      }, 260);
+    }
+
+    // A deep link to ?post= gets the feed placed underneath it, so "back" pops to the feed like a pushed screen.
+    const url = new URL(window.location.href);
+    const postParam = url.searchParams.get("post");
+    if (postParam) {
+      url.searchParams.delete("post");
+      window.history.replaceState(null, "", url.pathname + url.search + url.hash);
+      url.searchParams.set("post", postParam);
+      window.history.pushState(null, "", url.pathname + url.search);
+      syncDetailFromUrl();
+    }
+
+    window.addEventListener("popstate", syncDetailFromUrl);
+    return () => {
+      window.removeEventListener("popstate", syncDetailFromUrl);
+      window.clearTimeout(detailCloseTimerRef.current);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!detail || isDesktop()) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = previous; };
+  }, [detail]);
+
+  function openPost(id: number, focusComment = false) {
+    const url = new URL(window.location.href);
+    url.searchParams.set("post", String(id));
+    window.history.pushState(null, "", url.pathname + url.search);
+    window.clearTimeout(detailCloseTimerRef.current);
+    feedScrollRef.current = window.scrollY;
+    setDetailClosing(false);
+    setDetail({ id, focusComment });
+    if (isDesktop()) window.scrollTo(0, 0);
+  }
+
+  function updatePost(id: number, change: (post: Post) => Post) {
+    setPosts((items) => items.map((item) => (item.id === id ? change(item) : item)));
+  }
+
+  function toggleLike(id: number) {
+    updatePost(id, (post) => ({ ...post, liked: !post.liked, likes: post.likes + (post.liked ? -1 : 1) }));
+  }
+
+  function toggleSave(post: Post) {
+    updatePost(post.id, (item) => ({ ...item, saved: !item.saved }));
+    showToast(post.saved ? "Dihapus dari simpanan" : "Disimpan untuk nanti");
+  }
+
+  function addComment(postId: number, text: string, replyTarget: CommentReplyTarget | null) {
+    const newId = `comment-${postId}-${Date.now()}`;
+    updatePost(postId, (post) => {
+      const items = post.commentItems ?? [];
+      const commentItems = replyTarget
+        ? items.map((item) => item.id === replyTarget.rootId
+          ? { ...item, replies: [...(item.replies ?? []), { id: newId, author: currentUser.name, avatar: currentUser.avatar, text, time: "Baru saja", replyToCommentId: replyTarget.commentId, replyToAuthor: replyTarget.author }] }
+          : item)
+        : [...items, { id: newId, author: currentUser.name, avatar: currentUser.avatar, text, time: "Baru saja" }];
+      return { ...post, commentItems, comments: post.comments + 1 };
+    });
+    showToast(replyTarget ? "Balasan berhasil dikirim" : "Komentar berhasil dikirim");
+    return newId;
+  }
+
+  const detailPost = detail ? posts.find((post) => post.id === detail.id) : undefined;
 
   function showToast(message: string) {
     setToast(message);
@@ -209,6 +303,7 @@ export function ChatiersApp() {
         <LeftSidebar />
 
         <section className="w-full min-w-0 pb-10 md:max-w-[680px] md:justify-self-center md:pt-4 lg:max-w-none">
+          <div className={clsx(detail && !detailClosing && "md:hidden")}>
           <Stories onToast={showToast} />
           <CategoryTabs active={activeCategory} onChange={setActiveCategory} />
           <ComposerCard onOpen={() => setComposerOpen(true)} />
@@ -225,10 +320,33 @@ export function ChatiersApp() {
 
           <div className="mt-2.5 space-y-3">
             {filteredPosts.map((post, index) => (
-              <PostCard key={post.id} post={post} index={index} onToast={showToast} />
+              <PostCard
+                key={post.id}
+                post={post}
+                index={index}
+                onOpen={(focusComment) => openPost(post.id, focusComment)}
+                onLike={() => toggleLike(post.id)}
+                onSave={() => toggleSave(post)}
+                onShare={() => showToast("Tautan postingan disalin")}
+              />
             ))}
             {filteredPosts.length === 0 && <EmptyFeed onReset={() => { setActiveCategory("all"); setSearchQuery(""); }} />}
           </div>
+          </div>
+
+          {detail && (
+            <PostDetailScreen
+              key={detail.id}
+              post={detailPost}
+              closing={detailClosing}
+              autoFocusComment={detail.focusComment}
+              onBack={() => window.history.back()}
+              onLike={() => toggleLike(detail.id)}
+              onSave={() => detailPost && toggleSave(detailPost)}
+              onShare={() => showToast("Tautan postingan disalin")}
+              onComment={(text, replyTarget) => addComment(detail.id, text, replyTarget)}
+            />
+          )}
         </section>
 
         <RightRail onChat={() => setChatOpen(true)} />
@@ -337,38 +455,172 @@ function ComposerCard({ onOpen }: { onOpen: () => void }) {
   );
 }
 
-function PostCard({ post, index, onToast }: { post: Post; index: number; onToast: (message: string) => void }) {
-  const [liked, setLiked] = useState(Boolean(post.liked));
-  const [saved, setSaved] = useState(false);
-  const [commentsOpen, setCommentsOpen] = useState(false);
-  const [comment, setComment] = useState("");
-  const [commentCount, setCommentCount] = useState(post.comments);
-  const [commentItems, setCommentItems] = useState<PostComment[]>(post.commentItems ?? []);
-  const [replyTarget, setReplyTarget] = useState<CommentReplyTarget | null>(null);
-  const commentsEndRef = useRef<HTMLDivElement>(null);
-  const commentInputRef = useRef<HTMLInputElement>(null);
+type PostActionHandlers = {
+  onLike: () => void;
+  onSave: () => void;
+  onShare: () => void;
+};
+
+function PostCard({ post, index, onOpen, onLike, onSave, onShare }: { post: Post; index: number; onOpen: (focusComment: boolean) => void } & PostActionHandlers) {
+  function openFromCard(event: React.MouseEvent<HTMLElement>) {
+    if ((event.target as HTMLElement).closest("a, button, input, textarea, select, label")) return;
+    if (window.getSelection()?.toString()) return;
+    onOpen(false);
+  }
+
+  return (
+    <article style={{ animationDelay: `${index * 80}ms` }} className="animate-fade-up border-y border-slate-100 bg-white md:rounded-2xl md:border md:border-slate-200/80 md:shadow-card">
+      <div onClick={openFromCard} className="cursor-pointer p-4">
+        <PostContent post={post} />
+      </div>
+      <PostActions post={post} onComment={() => onOpen(true)} onLike={onLike} onSave={onSave} onShare={onShare} />
+    </article>
+  );
+}
+
+function PostContent({ post, authorRef }: { post: Post; authorRef?: React.Ref<HTMLDivElement> }) {
   const postImages = post.images ?? (post.image ? [{ id: `legacy-${post.id}`, name: "Lampiran postingan", url: post.image }] : []);
 
-  useEffect(() => {
-    if (!commentsOpen) return;
-    commentsEndRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
-  }, [commentItems, commentsOpen]);
+  return (
+    <>
+      <div ref={authorRef} className="flex items-start gap-3">
+        <Avatar src={post.avatar} alt={post.author} size="lg" />
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-1.5">
+            <h3 className="truncate text-sm font-bold text-slate-900">{post.author}</h3>
+            {post.id === 2 && <span className="flex h-3.5 w-3.5 items-center justify-center rounded-full bg-brand-600 text-[8px] font-bold text-white">✓</span>}
+            <span className="shrink-0 text-[10px] font-medium text-slate-400">· {formatPostTime(post.time)}</span>
+          </div>
+          <p className="truncate text-[11px] text-slate-400">{post.role}</p>
+        </div>
+        <span className={clsx("rounded-full px-2.5 py-1 text-[10px] font-bold ring-1", categoryStyles[post.category].badge)}>{getPostCategoryLabel(post.category)}</span>
+        <button className="icon-button -mr-2 -mt-2 h-9 w-9" aria-label="Opsi lainnya"><MoreHorizontal className="h-5 w-5" /></button>
+      </div>
 
-  function sendComment(event?: React.FormEvent<HTMLFormElement>) {
-    event?.preventDefault();
-    if (!comment.trim()) return;
-    const newId = `comment-${post.id}-${Date.now()}`;
-    if (replyTarget) {
-      const newReply: PostCommentReply = { id: newId, author: currentUser.name, avatar: currentUser.avatar, text: comment.trim(), time: "Baru saja", replyToCommentId: replyTarget.commentId, replyToAuthor: replyTarget.author };
-      setCommentItems((items) => items.map((item) => item.id === replyTarget.rootId ? { ...item, replies: [...(item.replies ?? []), newReply] } : item));
-    } else {
-      const newComment: PostComment = { id: newId, author: currentUser.name, avatar: currentUser.avatar, text: comment.trim(), time: "Baru saja" };
-      setCommentItems((items) => [...items, newComment]);
+      <p className="mt-3.5 whitespace-pre-wrap text-[13px] leading-6 text-slate-650 md:text-sm">{post.text}</p>
+
+      <PostDetailsPanel details={post.details} />
+
+      {post.location && (
+        <div className="mt-3 flex items-center gap-2 text-xs font-semibold text-slate-500">
+          <MapPin className="h-4 w-4 text-rose-500" />
+          {post.location}
+        </div>
+      )}
+
+      {postImages.length > 0 && (
+        <div className={clsx("relative mt-3.5 grid overflow-hidden rounded-2xl bg-slate-100", postImages.length > 1 && "grid-cols-2 gap-0.5")}>
+          {postImages.slice(0, 4).map((image, imageIndex) => (
+            <div key={image.id} className="relative overflow-hidden">
+              <img src={image.url} alt={image.name} className={clsx("w-full object-cover transition duration-700 hover:scale-[1.02]", postImages.length === 1 ? "aspect-[16/9]" : "aspect-square")} />
+              {imageIndex === 3 && postImages.length > 4 && (
+                <span className="absolute inset-0 flex items-center justify-center bg-slate-950/60 text-xl font-extrabold text-white">+{postImages.length - 4}</span>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {post.attachments && post.attachments.length > 0 && (
+        <div className="mt-3 space-y-2">
+          {post.attachments.map((attachment) => (
+            <a key={attachment.id} href={attachment.url} download={attachment.name} className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 transition hover:border-brand-200 hover:bg-brand-50">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white text-brand-600 shadow-sm"><FileText className="h-4 w-4" /></span>
+              <span className="min-w-0 flex-1"><b className="block truncate text-xs text-slate-700">{attachment.name}</b><span className="text-[10px] text-slate-400">{formatFileSize(attachment.size)}</span></span>
+              <span className="text-[10px] font-bold text-brand-600">Unduh</span>
+            </a>
+          ))}
+        </div>
+      )}
+    </>
+  );
+}
+
+function PostActions({ post, onComment, onLike, onSave, onShare }: { post: Post; onComment: () => void } & PostActionHandlers) {
+  return (
+    <div className="grid grid-cols-4 border-t border-slate-100 px-2 py-1.5 sm:px-4">
+      <ActionButton icon={Heart} label="Suka" count={post.likes} active={Boolean(post.liked)} onClick={onLike} />
+      <ActionButton icon={MessageCircle} label="Komentar" count={post.comments} onClick={onComment} />
+      <ActionButton icon={Share2} label="Bagikan" count={post.shares} onClick={onShare} />
+      <ActionButton icon={Bookmark} label="Simpan" active={Boolean(post.saved)} onClick={onSave} />
+    </div>
+  );
+}
+
+const SWIPE_EDGE = 24;
+
+function PostDetailScreen({
+  post,
+  closing,
+  autoFocusComment,
+  onBack,
+  onComment,
+  ...actions
+}: {
+  post?: Post;
+  closing: boolean;
+  autoFocusComment: boolean;
+  onBack: () => void;
+  onComment: (text: string, replyTarget: CommentReplyTarget | null) => string;
+} & PostActionHandlers) {
+  const [comment, setComment] = useState("");
+  const [replyTarget, setReplyTarget] = useState<CommentReplyTarget | null>(null);
+  const [entered, setEntered] = useState(false);
+  const [dragX, setDragX] = useState(0);
+  const [dragging, setDragging] = useState(false);
+  const dragRef = useRef<{ startX: number; startY: number; active: boolean } | null>(null);
+  const commentsRef = useRef<HTMLElement>(null);
+  const commentInputRef = useRef<HTMLInputElement>(null);
+  const headerRef = useRef<HTMLElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const authorRef = useRef<HTMLDivElement>(null);
+  const [authorScrolledAway, setAuthorScrolledAway] = useState(false);
+  const commentItems = post?.commentItems ?? [];
+
+  useEffect(() => {
+    if (!autoFocusComment) return;
+    // Wait for the push transition to finish so focusing doesn't jank the slide-in.
+    const timer = window.setTimeout(() => {
+      commentsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      commentInputRef.current?.focus({ preventScroll: true });
+    }, 340);
+    return () => window.clearTimeout(timer);
+  }, [autoFocusComment]);
+
+  // Once the author row scrolls up under the header, the header takes over showing who wrote the post.
+  useEffect(() => {
+    const author = authorRef.current;
+    const header = headerRef.current;
+    if (!author || !header) return;
+    // On desktop the detail header sticks below the 64px app header.
+    const coveredTop = header.offsetHeight + (isDesktop() ? 64 : 0);
+    const observer = new IntersectionObserver(
+      ([entry]) => setAuthorScrolledAway(!entry.isIntersecting && entry.boundingClientRect.top < coveredTop),
+      { rootMargin: `-${coveredTop}px 0px 0px 0px` }
+    );
+    observer.observe(author);
+    return () => observer.disconnect();
+  }, [post?.id]);
+
+  function scrollToTop() {
+    if (isDesktop()) window.scrollTo({ top: 0, behavior: "smooth" });
+    else scrollRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape" && !closing) onBack();
     }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [closing, onBack]);
+
+  function sendComment(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!comment.trim()) return;
+    const newId = onComment(comment.trim(), replyTarget);
     setComment("");
     setReplyTarget(null);
-    setCommentCount((value) => value + 1);
-    onToast(replyTarget ? "Balasan berhasil dikirim" : "Komentar berhasil dikirim");
     window.setTimeout(() => document.getElementById(newId)?.scrollIntoView({ behavior: "smooth", block: "nearest" }), 0);
   }
 
@@ -377,100 +629,146 @@ function PostCard({ post, index, onToast }: { post: Post; index: number; onToast
     window.setTimeout(() => commentInputRef.current?.focus(), 0);
   }
 
+  function focusComposer() {
+    commentsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    commentInputRef.current?.focus({ preventScroll: true });
+  }
+
+  // Swipe from the left edge to go back, like a native stack navigator.
+  function onTouchStart(event: React.TouchEvent) {
+    const touch = event.touches[0];
+    dragRef.current = !closing && !isDesktop() && touch.clientX <= SWIPE_EDGE ? { startX: touch.clientX, startY: touch.clientY, active: false } : null;
+  }
+
+  function onTouchMove(event: React.TouchEvent) {
+    const drag = dragRef.current;
+    if (!drag) return;
+    const touch = event.touches[0];
+    const dx = touch.clientX - drag.startX;
+    if (!drag.active) {
+      if (Math.abs(touch.clientY - drag.startY) > Math.abs(dx)) { dragRef.current = null; return; }
+      if (dx < 8) return;
+      drag.active = true;
+      setDragging(true);
+    }
+    setDragX(Math.max(0, dx));
+  }
+
+  function onTouchEnd() {
+    const drag = dragRef.current;
+    dragRef.current = null;
+    if (!drag?.active) return;
+    setDragging(false);
+    if (dragX > window.innerWidth * 0.33) onBack();
+    else setDragX(0);
+  }
+
+  const screenStyle: React.CSSProperties | undefined = dragging
+    ? { transform: `translateX(${dragX}px)`, transition: "none" }
+    : dragX > 0
+      ? { transform: closing ? "translateX(100%)" : "translateX(0)", transition: "transform .24s cubic-bezier(.32,.72,0,1)" }
+      : undefined;
+  const backdropOpacity = closing ? 0 : 1 - Math.min(1, dragX / (typeof window === "undefined" ? 1 : window.innerWidth));
+
   return (
-    <article style={{ animationDelay: `${index * 80}ms` }} className="animate-fade-up border-y border-slate-100 bg-white md:rounded-2xl md:border md:border-slate-200/80 md:shadow-card">
-      <div className="p-4">
-        <div className="flex items-start gap-3">
-          <Avatar src={post.avatar} alt={post.author} size="lg" />
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-1.5">
-              <h3 className="truncate text-sm font-bold text-slate-900">{post.author}</h3>
-              {post.id === 2 && <span className="flex h-3.5 w-3.5 items-center justify-center rounded-full bg-brand-600 text-[8px] font-bold text-white">✓</span>}
-              <span className="shrink-0 text-[10px] font-medium text-slate-400">· {formatPostTime(post.time)}</span>
-            </div>
-            <p className="truncate text-[11px] text-slate-400">{post.role}</p>
-          </div>
-          <span className={clsx("rounded-full px-2.5 py-1 text-[10px] font-bold ring-1", categoryStyles[post.category].badge)}>{getPostCategoryLabel(post.category)}</span>
-          <button className="icon-button -mr-2 -mt-2 h-9 w-9" aria-label="Opsi lainnya"><MoreHorizontal className="h-5 w-5" /></button>
-        </div>
-
-        <p className="mt-3.5 whitespace-pre-wrap text-[13px] leading-6 text-slate-650 md:text-sm">{post.text}</p>
-
-        <PostDetailsPanel details={post.details} />
-
-        {post.location && (
-          <div className="mt-3 flex items-center gap-2 text-xs font-semibold text-slate-500">
-            <MapPin className="h-4 w-4 text-rose-500" />
-            {post.location}
-          </div>
+    <div className={clsx("fixed inset-0 z-[70] md:static md:z-auto", closing && "md:hidden")}>
+      <div className="absolute inset-0 animate-fade-in bg-slate-950/25 transition-opacity duration-300 md:hidden" style={{ opacity: backdropOpacity }} aria-hidden />
+      <section
+        aria-label="Detail postingan"
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
+        onTouchCancel={onTouchEnd}
+        onAnimationEnd={(event) => event.target === event.currentTarget && setEntered(true)}
+        style={screenStyle}
+        className={clsx(
+          "absolute inset-0 flex flex-col bg-white shadow-float motion-reduce:animate-none md:static md:bg-transparent md:shadow-none",
+          closing ? dragX === 0 && "animate-screen-out" : !entered && "animate-screen-in md:animate-fade-up"
         )}
+      >
+        <header ref={headerRef} className="shrink-0 border-b border-slate-200/80 bg-white/95 backdrop-blur-xl md:sticky md:top-16 md:z-20 md:rounded-2xl md:border md:shadow-card">
+          <div className="mx-auto flex h-14 w-full max-w-[680px] items-center gap-1 px-2">
+            <button type="button" onClick={onBack} aria-label="Kembali" className="icon-button h-10 w-10">
+              <ArrowLeft className="h-5 w-5" />
+            </button>
+            <div className="relative h-10 min-w-0 flex-1 overflow-hidden">
+              <div aria-hidden={authorScrolledAway} className={clsx("absolute inset-0 flex flex-col justify-center transition duration-300 ease-out motion-reduce:transition-none", authorScrolledAway ? "-translate-y-full opacity-0" : "translate-y-0 opacity-100")}>
+                <h2 className="text-sm font-extrabold text-slate-900">Postingan</h2>
+                {post && <p className="truncate text-[11px] text-slate-400">oleh {post.author}</p>}
+              </div>
+              {post && (
+                <button
+                  type="button"
+                  onClick={scrollToTop}
+                  tabIndex={authorScrolledAway ? 0 : -1}
+                  aria-hidden={!authorScrolledAway}
+                  aria-label={`Postingan ${post.author}, kembali ke atas`}
+                  className={clsx("absolute inset-0 flex items-center gap-2.5 text-left transition duration-300 ease-out motion-reduce:transition-none", authorScrolledAway ? "translate-y-0 opacity-100" : "pointer-events-none translate-y-full opacity-0")}
+                >
+                  <Avatar src={post.avatar} alt="" size="sm" />
+                  <span className="min-w-0">
+                    <span className="block truncate text-sm font-extrabold text-slate-900">{post.author}</span>
+                    <span className="block truncate text-[11px] text-slate-400">{post.role}</span>
+                  </span>
+                </button>
+              )}
+            </div>
+          </div>
+        </header>
 
-        {postImages.length > 0 && (
-          <div className={clsx("relative mt-3.5 grid overflow-hidden rounded-2xl bg-slate-100", postImages.length > 1 && "grid-cols-2 gap-0.5")}>
-            {postImages.slice(0, 4).map((image, imageIndex) => (
-              <div key={image.id} className="relative overflow-hidden">
-                <img src={image.url} alt={image.name} className={clsx("w-full object-cover transition duration-700 hover:scale-[1.02]", postImages.length === 1 ? "aspect-[16/9]" : "aspect-square")} />
-                {imageIndex === 3 && postImages.length > 4 && (
-                  <span className="absolute inset-0 flex items-center justify-center bg-slate-950/60 text-xl font-extrabold text-white">+{postImages.length - 4}</span>
+        {!post ? (
+          <div className="flex flex-1 flex-col items-center justify-center px-8 text-center md:mt-3 md:rounded-2xl md:border md:border-dashed md:border-slate-300 md:bg-white md:py-12">
+            <Sparkles className="h-8 w-8 text-brand-500" />
+            <h3 className="mt-3 font-bold">Postingan tidak ditemukan</h3>
+            <p className="mt-1 text-sm text-slate-500">Mungkin sudah dihapus atau tautannya keliru.</p>
+            <button onClick={onBack} className="mt-4 rounded-full bg-ink px-4 py-2 text-xs font-bold text-white">Kembali ke feed</button>
+          </div>
+        ) : (
+          <>
+            <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto overscroll-contain md:flex-none md:overflow-visible">
+              <div className="mx-auto w-full max-w-[680px] md:pt-3">
+                <article className="bg-white md:rounded-2xl md:border md:border-slate-200/80 md:shadow-card">
+                  <div className="p-4">
+                    <PostContent post={post} authorRef={authorRef} />
+                  </div>
+                  <PostActions post={post} onComment={focusComposer} {...actions} />
+
+                  <section ref={commentsRef} className="scroll-mt-2 md:scroll-mt-[136px] border-t border-slate-100 bg-slate-50/80 md:rounded-b-2xl">
+                    <div className="border-b border-slate-200/70 px-4 py-3">
+                      <h4 className="text-xs font-extrabold text-slate-800">Obrolan komentar</h4>
+                      <p className="mt-0.5 text-[10px] text-slate-400">{countLoadedComments(commentItems)} ditampilkan dari {post.comments} komentar</p>
+                    </div>
+                    <div className="space-y-3 px-4 py-4">
+                      {commentItems.length === 0 ? (
+                        <div className="py-6 text-center"><MessageCircle className="mx-auto h-7 w-7 text-slate-300" /><p className="mt-2 text-xs font-semibold text-slate-500">Belum ada komentar</p><p className="mt-0.5 text-[10px] text-slate-400">Mulai obrolan pertama di postingan ini.</p></div>
+                      ) : commentItems.map((item) => <CommentThread key={item.id} comment={item} onReply={startReply} />)}
+                    </div>
+                  </section>
+                </article>
+              </div>
+            </div>
+
+            <form onSubmit={sendComment} className="shrink-0 border-t border-slate-200/70 bg-white px-3 pb-[max(12px,env(safe-area-inset-bottom))] pt-3 md:sticky md:bottom-4 md:z-10 md:mt-3 md:rounded-2xl md:border md:pb-3 md:shadow-card">
+              <div className="mx-auto w-full max-w-[680px]">
+                {replyTarget && (
+                  <div className="mb-2 ml-10 flex items-center gap-2 rounded-xl bg-brand-50 px-3 py-2 text-[10px] text-brand-700">
+                    <span className="min-w-0 flex-1"><b>Membalas {replyTarget.author}</b><span className="ml-1 hidden truncate text-brand-500 sm:inline">· {replyTarget.text}</span></span>
+                    <button type="button" onClick={() => setReplyTarget(null)} aria-label="Batalkan balasan" className="shrink-0 rounded-full p-1 hover:bg-white"><X className="h-3.5 w-3.5" /></button>
+                  </div>
                 )}
+                <div className="flex items-end gap-2">
+                  <Avatar src={currentUser.avatar} alt={currentUser.name} size="sm" />
+                  <div className="flex min-w-0 flex-1 items-center rounded-2xl border border-slate-200 bg-slate-50 px-3 focus-within:border-brand-200 focus-within:bg-white focus-within:ring-2 focus-within:ring-brand-100">
+                    <input ref={commentInputRef} value={comment} onChange={(event) => setComment(event.target.value)} className="min-w-0 flex-1 bg-transparent py-2.5 text-xs outline-none" placeholder={replyTarget ? `Balas ${replyTarget.author}...` : "Tulis komentar..."} aria-label={replyTarget ? `Balas ${replyTarget.author}` : "Tulis komentar"} />
+                    <button type="submit" disabled={!comment.trim()} aria-label={replyTarget ? "Kirim balasan" : "Kirim komentar"} className="ml-2 flex h-7 w-7 items-center justify-center rounded-full bg-brand-600 text-white transition hover:bg-brand-700 disabled:bg-slate-200"><Send className="h-3.5 w-3.5" /></button>
+                  </div>
+                </div>
               </div>
-            ))}
-          </div>
+            </form>
+          </>
         )}
-
-        {post.attachments && post.attachments.length > 0 && (
-          <div className="mt-3 space-y-2">
-            {post.attachments.map((attachment) => (
-              <a key={attachment.id} href={attachment.url} download={attachment.name} className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 transition hover:border-brand-200 hover:bg-brand-50">
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white text-brand-600 shadow-sm"><FileText className="h-4 w-4" /></span>
-                <span className="min-w-0 flex-1"><b className="block truncate text-xs text-slate-700">{attachment.name}</b><span className="text-[10px] text-slate-400">{formatFileSize(attachment.size)}</span></span>
-                <span className="text-[10px] font-bold text-brand-600">Unduh</span>
-              </a>
-            ))}
-          </div>
-        )}
-
-      </div>
-
-      <div className="grid grid-cols-4 border-t border-slate-100 px-2 py-1.5 sm:px-4">
-        <ActionButton icon={Heart} label="Suka" count={post.likes + (liked && !post.liked ? 1 : !liked && post.liked ? -1 : 0)} active={liked} onClick={() => setLiked((value) => !value)} />
-        <ActionButton icon={MessageCircle} label="Komentar" count={commentCount} onClick={() => setCommentsOpen((value) => { if (value) setReplyTarget(null); return !value; })} />
-        <ActionButton icon={Share2} label="Bagikan" count={post.shares} onClick={() => onToast("Tautan postingan disalin")} />
-        <ActionButton icon={Bookmark} label="Simpan" active={saved} onClick={() => { setSaved((value) => !value); onToast(saved ? "Dihapus dari simpanan" : "Disimpan untuk nanti"); }} />
-      </div>
-
-      {commentsOpen && (
-        <div className="border-t border-slate-100 bg-slate-50/80">
-          <div className="flex items-center justify-between border-b border-slate-200/70 px-4 py-3">
-            <div><h4 className="text-xs font-extrabold text-slate-800">Obrolan komentar</h4><p className="mt-0.5 text-[10px] text-slate-400">{countLoadedComments(commentItems)} ditampilkan dari {commentCount} komentar</p></div>
-            <button type="button" onClick={() => { setCommentsOpen(false); setReplyTarget(null); }} aria-label="Tutup komentar" className="flex h-8 w-8 items-center justify-center rounded-full text-slate-400 hover:bg-white hover:text-slate-700"><X className="h-4 w-4" /></button>
-          </div>
-
-          <div className="max-h-80 space-y-3 overflow-y-auto px-4 py-4">
-            {commentItems.length === 0 ? (
-              <div className="py-6 text-center"><MessageCircle className="mx-auto h-7 w-7 text-slate-300" /><p className="mt-2 text-xs font-semibold text-slate-500">Belum ada komentar</p><p className="mt-0.5 text-[10px] text-slate-400">Mulai obrolan pertama di postingan ini.</p></div>
-            ) : commentItems.map((item) => <CommentThread key={item.id} comment={item} onReply={startReply} />)}
-            <div ref={commentsEndRef} />
-          </div>
-
-          <form onSubmit={sendComment} className="border-t border-slate-200/70 bg-white p-3">
-            {replyTarget && (
-              <div className="mb-2 ml-10 flex items-center gap-2 rounded-xl bg-brand-50 px-3 py-2 text-[10px] text-brand-700">
-                <span className="min-w-0 flex-1"><b>Membalas {replyTarget.author}</b><span className="ml-1 hidden truncate text-brand-500 sm:inline">· {replyTarget.text}</span></span>
-                <button type="button" onClick={() => setReplyTarget(null)} aria-label="Batalkan balasan" className="shrink-0 rounded-full p-1 hover:bg-white"><X className="h-3.5 w-3.5" /></button>
-              </div>
-            )}
-            <div className="flex items-end gap-2">
-              <Avatar src={currentUser.avatar} alt={currentUser.name} size="sm" />
-              <div className="flex min-w-0 flex-1 items-center rounded-2xl border border-slate-200 bg-slate-50 px-3 focus-within:border-brand-200 focus-within:bg-white focus-within:ring-2 focus-within:ring-brand-100">
-                <input ref={commentInputRef} autoFocus value={comment} onChange={(event) => setComment(event.target.value)} className="min-w-0 flex-1 bg-transparent py-2.5 text-xs outline-none" placeholder={replyTarget ? `Balas ${replyTarget.author}...` : "Tulis komentar..."} aria-label={replyTarget ? `Balas ${replyTarget.author}` : "Tulis komentar"} />
-                <button type="submit" disabled={!comment.trim()} aria-label={replyTarget ? "Kirim balasan" : "Kirim komentar"} className="ml-2 flex h-7 w-7 items-center justify-center rounded-full bg-brand-600 text-white transition hover:bg-brand-700 disabled:bg-slate-200"><Send className="h-3.5 w-3.5" /></button>
-              </div>
-            </div>
-          </form>
-        </div>
-      )}
-    </article>
+      </section>
+    </div>
   );
 }
 

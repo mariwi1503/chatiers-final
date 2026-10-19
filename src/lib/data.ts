@@ -216,6 +216,7 @@ export type Post = {
   commentItems?: PostComment[];
   shares: number;
   liked?: boolean;
+  saved?: boolean;
 };
 
 export const posts: Post[] = [

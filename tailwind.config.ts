@@ -30,11 +30,26 @@ const config: Config = {
       animation: {
         "fade-up": "fadeUp .45s ease-out both",
         "soft-pulse": "softPulse 2.6s ease-in-out infinite",
+        "fade-in": "fadeIn .3s ease-out",
+        "screen-in": "screenIn .34s cubic-bezier(.32,.72,0,1) both",
+        "screen-out": "screenOut .26s cubic-bezier(.4,0,1,1) both",
       },
       keyframes: {
         fadeUp: {
           "0%": { opacity: "0", transform: "translateY(8px)" },
           "100%": { opacity: "1", transform: "translateY(0)" },
+        },
+        fadeIn: {
+          "0%": { opacity: "0" },
+          "100%": { opacity: "1" },
+        },
+        screenIn: {
+          "0%": { transform: "translateX(100%)" },
+          "100%": { transform: "translateX(0)" },
+        },
+        screenOut: {
+          "0%": { transform: "translateX(0)" },
+          "100%": { transform: "translateX(100%)" },
         },
         softPulse: {
           "0%, 100%": { boxShadow: "0 0 0 0 rgba(47,140,255,.15)" },
