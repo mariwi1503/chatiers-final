@@ -1,0 +1,58 @@
+import type { Product } from "./storefront";
+
+export const demoProducts: Product[] = [
+  {
+    id: "demo-headphone-wireless",
+    name: "Headphone Wireless",
+    description: "Headphone nirkabel dengan bantalan telinga empuk dan suara yang jernih. Cocok untuk menemani kerja, mendengarkan musik, atau menikmati podcast sehari-hari.",
+    price: 850000,
+    category: "Elektronik",
+    image: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=800&h=800&q=85",
+    status: "available",
+  },
+  {
+    id: "demo-kamera-mirrorless",
+    name: "Kamera Mirrorless",
+    description: "Kamera ringkas untuk mengabadikan perjalanan dan membuat konten. Dilengkapi lensa kit, baterai, serta tali kamera. Kondisi terawat dan siap digunakan.",
+    price: 6750000,
+    category: "Fotografi",
+    image: "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=800&h=800&q=85",
+    status: "available",
+  },
+  {
+    id: "demo-jam-tangan-minimalis",
+    name: "Jam Tangan Minimalis",
+    description: "Jam tangan dengan desain sederhana, layar bundar, dan tali berwarna putih. Mudah dipadukan dengan pakaian kasual maupun busana kerja.",
+    price: 425000,
+    category: "Aksesori",
+    image: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=800&h=800&q=85",
+    status: "available",
+  },
+  {
+    id: "demo-sneakers-merah",
+    name: "Sneakers Merah",
+    description: "Sneakers merah dengan sol putih, ringan dan nyaman untuk aktivitas harian. Ukuran 42, kondisi baru, sudah termasuk kotak sepatu.",
+    price: 725000,
+    category: "Fashion",
+    image: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=800&h=800&q=85",
+    status: "available",
+  },
+  {
+    id: "demo-ransel-harian",
+    name: "Ransel Harian",
+    description: "Ransel serbaguna untuk bekerja, kuliah, atau perjalanan singkat. Memiliki ruang utama yang lega, kompartemen laptop, dan kantong tambahan untuk barang kecil.",
+    price: 395000,
+    category: "Tas",
+    image: "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?auto=format&fit=crop&w=800&h=800&q=85",
+    status: "available",
+  },
+  {
+    id: "demo-lampu-meja",
+    name: "Lampu Meja",
+    description: "Lampu meja dengan desain modern untuk melengkapi sudut kerja atau ruang baca. Cahaya hangat membuat suasana ruangan terasa lebih nyaman.",
+    price: 285000,
+    category: "Rumah & Dekorasi",
+    image: "https://images.unsplash.com/photo-1507473885765-e6ed057f782c?auto=format&fit=crop&w=800&h=800&q=85",
+    status: "available",
+  },
+];

@@ -1,6 +1,7 @@
 import { BadgeDollarSign, BriefcaseBusiness, CircleDollarSign, Lightbulb, MessagesSquare, Search, ShoppingBag, UserSearch } from "lucide-react";
 
 export const currentUser = {
+  username: "aryapratama",
   name: "Arya Pratama",
   handle: "@aryapratama",
   avatar: "https://i.pravatar.cc/160?img=12",
@@ -200,6 +201,7 @@ export type PostDetails =
 
 export type Post = {
   id: number;
+  productId?: string;
   author: string;
   role: string;
   avatar: string;
@@ -290,6 +292,23 @@ export const posts: Post[] = [
     shares: 12,
   },
   {
+    id: 5,
+    productId: "nadia-ui-kit-dashboard",
+    author: "Nadia Putri",
+    role: "Product Designer · Creator",
+    avatar: "https://i.pravatar.cc/160?img=47",
+    time: "1 jam",
+    category: "sell",
+    text: "UI Kit Dashboard Pro versi 2.0 akhirnya rilis! 🎉 Sekarang sudah mendukung mode gelap dan lebih dari 300 komponen. Cocok buat tim yang mau cepat merilis dashboard tanpa mulai dari nol.",
+    details: { type: "sell", title: "UI Kit Dashboard Pro", pricingType: "fixed", price: 249000, condition: "Lihat detail produk", itemCategory: "Produk Digital", status: "available" },
+    likes: 342,
+    comments: 2,
+    commentItems: [
+      { id: "5-1", author: "Siti Rahma", avatar: "https://i.pravatar.cc/160?img=32", text: "Sudah ada versi kode React-nya juga, Nad?", time: "40 menit", replies: [{ id: "5-1-1", author: "Nadia Putri", avatar: "https://i.pravatar.cc/160?img=47", text: "Belum, Siti. Saat ini masih file Figma, versi React sedang dikerjakan 🙌", time: "32 menit", replyToAuthor: "Siti Rahma" }] },
+    ],
+    shares: 26,
+  },
+  {
     id: 3,
     author: "Siti Rahma",
     role: "Software Engineer at Tokopedia",
@@ -340,6 +359,48 @@ export const posts: Post[] = [
       },
     ],
     shares: 21,
+  },
+  {
+    id: 6,
+    productId: "rian-new-balance-574",
+    author: "Rian Ardiansyah",
+    role: "Owner at Sneakerhead ID",
+    avatar: "https://i.pravatar.cc/160?img=11",
+    time: "4 jam",
+    category: "sell",
+    text: "Baru masuk: New Balance 574 Olive size 43, baru dipakai 3 kali. Sudah legit check dan siap kirim hari ini juga 👟",
+    details: { type: "sell", title: "New Balance 574 Olive", pricingType: "fixed", price: 1150000, condition: "Lihat detail produk", itemCategory: "Fashion", status: "available" },
+    likes: 96,
+    comments: 14,
+    shares: 4,
+  },
+  {
+    id: 7,
+    productId: "siti-keychron-k2",
+    author: "Siti Rahma",
+    role: "Software Engineer at Tokopedia",
+    avatar: "https://i.pravatar.cc/160?img=32",
+    time: "5 jam",
+    category: "sell",
+    text: "Melepas Keychron K2 kesayangan karena sudah ganti ke keyboard split. Semua tombol normal, bonus keycap PBT. Domisili Jakarta Barat, bisa COD.",
+    details: { type: "sell", title: "Keychron K2 Preloved", pricingType: "fixed", price: 850000, condition: "Lihat detail produk", itemCategory: "Elektronik", status: "available" },
+    likes: 58,
+    comments: 9,
+    shares: 3,
+  },
+  {
+    id: 8,
+    productId: "dimas-kopi-gayo",
+    author: "Dimas Surya",
+    role: "Product Builder · Founder Seduh Bareng",
+    avatar: "https://i.pravatar.cc/160?img=8",
+    time: "1 hari",
+    category: "sell",
+    text: "Batch roasting minggu ini sudah siap ☕ Arabika Gayo dengan rasa cokelat dan gula aren. Pesan sebelum Jumat supaya dikirim dalam kondisi paling segar.",
+    details: { type: "sell", title: "Kopi Arabika Gayo 250 g", pricingType: "fixed", price: 95000, condition: "Lihat detail produk", itemCategory: "Makanan & Minuman", status: "available" },
+    likes: 143,
+    comments: 21,
+    shares: 11,
   },
 ];
 
