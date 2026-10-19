@@ -3,7 +3,7 @@
 import { Bell, ChevronDown, Menu, MessageCircle, Newspaper, Search, Users } from "lucide-react";
 import clsx from "clsx";
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Avatar } from "@/components/avatar";
 import { Logo } from "@/components/logo";
 import { MobileMenu } from "@/components/mobile-menu";
@@ -18,13 +18,15 @@ const headerNavigation = [
   { id: "communities", label: "Komunitas", href: "/communities", icon: Users },
 ] as const;
 
-export function AppHeader({ active, searchQuery, onSearchChange, searchPlaceholder = "Cari di Chatiers" }: { active: HeaderSection; searchQuery?: string; onSearchChange?: (value: string) => void; searchPlaceholder?: string }) {
+/** `compact` swaps the mobile header bar for page-specific content, e.g. the profile being viewed. */
+export function AppHeader({ active, searchQuery, onSearchChange, searchPlaceholder = "Cari di Chatiers", compact }: { active?: HeaderSection; searchQuery?: string; onSearchChange?: (value: string) => void; searchPlaceholder?: string; compact?: { visible: boolean; content: ReactNode } }) {
   const [localSearch, setLocalSearch] = useState("");
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const searchInput = useRef<HTMLInputElement>(null);
   const value = searchQuery ?? localSearch;
+  const compactVisible = Boolean(compact?.visible);
 
   useEffect(() => {
     if (searchOpen) searchInput.current?.focus();
@@ -44,9 +46,9 @@ export function AppHeader({ active, searchQuery, onSearchChange, searchPlacehold
     <>
     <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/90 backdrop-blur-xl">
       <div className="relative mx-auto flex h-16 max-w-[1200px] items-center gap-4 px-4">
-        <button type="button" className="icon-button -ml-2 shrink-0 lg:hidden" onClick={() => setMenuOpen(true)} aria-label="Buka menu" aria-expanded={menuOpen}><Menu className="h-5 w-5" /></button>
+        <button type="button" className={clsx("icon-button -ml-2 shrink-0 transition-opacity duration-200 lg:hidden", compactVisible && "max-md:opacity-0")} onClick={() => setMenuOpen(true)} aria-label="Buka menu" aria-expanded={menuOpen}><Menu className="h-5 w-5" /></button>
 
-        <Link href="/" aria-label="Kembali ke feed" className="flex shrink-0 items-center max-md:absolute max-md:left-1/2 max-md:-translate-x-1/2">
+        <Link href="/" aria-label="Kembali ke feed" className={clsx("flex shrink-0 items-center transition-opacity duration-200 max-md:absolute max-md:left-1/2 max-md:-translate-x-1/2", compactVisible && "max-md:opacity-0")}>
           <Logo compact className="w-[120px] shrink-0 md:w-[160px]" />
         </Link>
 
@@ -58,8 +60,14 @@ export function AppHeader({ active, searchQuery, onSearchChange, searchPlacehold
           <button type="button" onClick={closeSearch} className="shrink-0 rounded-full px-2 py-2 text-sm font-semibold text-brand-600 md:hidden">Batal</button>
         </form>
 
+        {compact && (
+          <div inert={!compactVisible} aria-hidden={!compactVisible} className={clsx("absolute inset-0 z-20 flex items-center gap-1 px-2 transition duration-200 ease-out motion-reduce:transition-none md:hidden", compactVisible ? "translate-y-0 opacity-100" : "pointer-events-none translate-y-2 opacity-0")}>
+            {compact.content}
+          </div>
+        )}
+
         <div className="ml-auto flex h-full items-center gap-1">
-          <button type="button" className="icon-button relative -mr-2 md:hidden" onClick={() => setSearchOpen(true)} aria-label={searchPlaceholder} aria-expanded={searchOpen}>
+          <button type="button" className={clsx("icon-button relative -mr-2 transition-opacity duration-200 md:hidden", compactVisible && "opacity-0")} onClick={() => setSearchOpen(true)} aria-label={searchPlaceholder} aria-expanded={searchOpen}>
             <Search className="h-5 w-5" />
             {value && <span className="absolute right-2 top-2 h-2 w-2 rounded-full border-2 border-white bg-brand-600" />}
           </button>

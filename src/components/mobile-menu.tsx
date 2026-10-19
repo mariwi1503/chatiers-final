@@ -17,7 +17,7 @@ const menuItems = [
   { id: "profile", label: "Profil", icon: UserRound, href: "/profile" },
 ] as const;
 
-export function MobileMenu({ open, active, onClose }: { open: boolean; active: MenuSection; onClose: () => void }) {
+export function MobileMenu({ open, active, onClose }: { open: boolean; active?: MenuSection; onClose: () => void }) {
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-[70] bg-slate-950/40 lg:hidden" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
