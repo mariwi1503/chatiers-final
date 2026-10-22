@@ -4,12 +4,13 @@ import {
   ArrowLeft,
   Bookmark,
   BriefcaseBusiness,
+  Building2,
   CalendarDays,
-  Camera,
   Check,
   ChevronDown,
   CircleEllipsis,
   Globe2,
+  Grid3X3,
   Heart,
   Link2,
   MapPin,
@@ -18,8 +19,10 @@ import {
   Pencil,
   Plus,
   Share2,
+  ShoppingBag,
   Sparkles,
   UserPlus,
+  UserRound,
   X,
 } from "lucide-react";
 import { useEffect, useRef, useState, type RefObject } from "react";
@@ -124,12 +127,12 @@ export function ProfilePage({ user }: { user?: UserProfile }) {
   );
 
   return (
-    <div className="min-h-screen pb-20 md:pb-8">
-      <AppHeader active={isOwner ? "profile" : undefined} compact={{ visible: compact, content: compactHeader }} />
+    <div className="min-h-screen pb-[calc(56px+env(safe-area-inset-bottom))] md:pb-8">
+      <AppHeader active={isOwner ? "profile" : undefined} mobileTitle={profile.handle.replace(/^@/, "")} compact={{ visible: compact, content: compactHeader }} />
 
       <main className="mx-auto grid w-full max-w-[1200px] grid-cols-1 gap-4 px-0 md:px-4 md:pt-4 lg:grid-cols-[minmax(0,1fr)_280px] xl:grid-cols-[minmax(0,1fr)_300px]">
         <section className="min-w-0">
-          <ProfileHero profile={profile} isOwner={isOwner} nameRef={nameRef} connected={connected} onToggleConnect={toggleConnect} onEdit={() => setEditOpen(true)} onToast={showToast} />
+          <ProfileHero profile={profile} isOwner={isOwner} nameRef={nameRef} connected={connected} onToggleConnect={toggleConnect} onEdit={() => setEditOpen(true)} />
           <ProfileTabs active={activeTab} onChange={navigateTab} profile={profile} showIdentity={compact} />
 
           {activeTab === "postingan" && (
@@ -199,67 +202,56 @@ function VerifiedBadge({ small = false }: { small?: boolean }) {
   return <span className={clsx("flex shrink-0 items-center justify-center rounded-full bg-brand-600 text-white", small ? "h-3.5 w-3.5" : "h-5 w-5")} title="Akun terverifikasi"><Check className={clsx("stroke-[3]", small ? "h-2 w-2" : "h-3 w-3")} /></span>;
 }
 
-function ProfileHero({ profile, isOwner, nameRef, connected, onToggleConnect, onEdit, onToast }: { profile: UserProfile; isOwner: boolean; nameRef: RefObject<HTMLDivElement | null>; connected: boolean; onToggleConnect: () => void; onEdit: () => void; onToast: (message: string) => void }) {
-
+function ProfileHero({ profile, isOwner, nameRef, connected, onToggleConnect, onEdit }: { profile: UserProfile; isOwner: boolean; nameRef: RefObject<HTMLDivElement | null>; connected: boolean; onToggleConnect: () => void; onEdit: () => void }) {
   return (
-    <article className="overflow-hidden border-y border-slate-200 bg-white md:rounded-3xl md:border md:shadow-card">
-      {profile.cover ? (
-        <div className="relative h-36 overflow-hidden bg-slate-200 sm:h-44">
-          <img src={profile.cover} alt="" className="h-full w-full object-cover" />
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/40 via-transparent to-transparent" />
-        </div>
-      ) : (
-        <div className="group relative h-36 overflow-hidden bg-[radial-gradient(circle_at_82%_20%,rgba(255,255,255,.26),transparent_20%),linear-gradient(120deg,#0f172a_0%,#123a84_48%,#5b5ce2_100%)] sm:h-44">
-          <div className="absolute -left-10 top-8 h-40 w-40 rounded-full border border-white/10" />
-          <div className="absolute left-20 top-24 h-32 w-32 rounded-full border border-white/10" />
-          <div className="absolute right-8 top-6 max-w-[190px] text-right text-white/80"><p className="text-[10px] font-bold uppercase tracking-[0.25em]">Create · Connect</p><p className="mt-2 text-lg font-black leading-5 text-white">Ideas grow better together.</p></div>
-          {isOwner && <button onClick={() => onToast("Penggantian cover akan segera tersedia")} className="absolute bottom-3 right-3 flex items-center gap-2 rounded-full bg-slate-950/40 px-3 py-2 text-[11px] font-bold text-white backdrop-blur-md transition hover:bg-slate-950/60"><Camera className="h-3.5 w-3.5" /><span className="hidden sm:inline">Ganti sampul</span></button>}
-        </div>
-      )}
+    <article className="bg-white px-4 pb-5 pt-4 md:rounded-3xl md:border md:border-slate-200 md:p-6 md:shadow-card">
+      <div className="grid grid-cols-[5rem_minmax(0,1fr)] items-center gap-x-4 md:grid-cols-[auto_minmax(0,1fr)_auto] md:gap-x-5">
+        <img src={profile.avatar} alt={profile.name} className="col-start-1 row-start-1 h-20 w-20 rounded-full object-cover ring-1 ring-slate-200 md:h-24 md:w-24" />
 
-      <div className="px-4 pb-5 sm:px-6">
-        <div className="flex items-end justify-between gap-3">
-          <div className="relative z-10 -mt-12 shrink-0 rounded-full bg-white p-1.5 shadow-sm sm:-mt-14"><img src={profile.avatar} alt={profile.name} className="h-24 w-24 rounded-full object-cover ring-1 ring-slate-200 sm:h-28 sm:w-28" /></div>
-          <div className="flex items-center gap-2 pb-1">
-            {isOwner ? (
-              <button onClick={onEdit} className="focus-ring flex h-10 items-center gap-2 rounded-full bg-slate-950 px-4 text-xs font-bold text-white transition hover:bg-brand-700"><Pencil className="h-3.5 w-3.5" /> Edit profil</button>
-            ) : (
-              <>
-                <Link href="/messages" className="focus-ring flex h-10 items-center gap-2 rounded-full border border-slate-200 px-4 text-xs font-bold text-slate-700 transition hover:bg-slate-50"><MessageCircle className="h-3.5 w-3.5" /> Pesan</Link>
-                <button onClick={onToggleConnect} aria-pressed={connected} className={clsx("focus-ring flex h-10 items-center gap-2 rounded-full px-4 text-xs font-bold transition", connected ? "bg-emerald-50 text-emerald-700 hover:bg-emerald-100" : "bg-brand-600 text-white hover:bg-brand-700")}>{connected ? <Check className="h-3.5 w-3.5" /> : <UserPlus className="h-3.5 w-3.5" />}{connected ? "Diminta" : "Hubungkan"}</button>
-              </>
-            )}
+        <div className="col-span-2 col-start-1 row-start-2 mt-3 min-w-0 md:col-span-1 md:col-start-2 md:row-start-1 md:mt-0">
+          <div ref={nameRef} className="flex items-center gap-2">
+            <h1 className="min-w-0 text-sm font-bold text-slate-950 [overflow-wrap:anywhere] md:text-2xl md:font-black md:tracking-tight">{profile.name}</h1>
+            {profile.verified && <VerifiedBadge />}
           </div>
+          <p className="mt-0.5 text-xs text-slate-500 [overflow-wrap:anywhere] md:mt-1 md:text-sm md:font-semibold md:text-slate-600">{profile.role}</p>
+          <p className="mt-0.5 hidden text-xs text-slate-400 [overflow-wrap:anywhere] md:block">{profile.handle}</p>
         </div>
 
-        <div className="mt-3">
-          <div ref={nameRef} className="flex items-center gap-2"><h1 className="text-xl font-black text-slate-950 sm:text-2xl">{profile.name}</h1>{profile.verified && <VerifiedBadge />}</div>
-          <p className="mt-0.5 text-sm font-semibold text-slate-500">{profile.role} <span className="font-normal text-slate-300">·</span> {profile.handle}</p>
-          <p className="mt-3 max-w-xl text-[13px] leading-6 text-slate-600 sm:text-sm">{profile.bio}</p>
-          <ProfileFacts profile={profile} className="mt-3" />
+        <p className="col-span-2 col-start-1 row-start-3 mt-1 max-w-2xl text-[13px] leading-5 text-slate-600 [overflow-wrap:anywhere] md:col-span-3 md:row-start-2 md:mt-4 md:text-sm md:leading-6">{profile.bio}</p>
+        <ProfileFacts profile={profile} summary className="col-span-2 col-start-1 row-start-4 mt-2 md:col-span-3 md:row-start-3 md:mt-3" />
+
+        <div className="col-span-2 col-start-1 row-start-5 mt-4 flex items-center gap-2 md:col-span-1 md:col-start-3 md:row-start-1 md:mt-0">
+          {isOwner ? (
+            <button type="button" onClick={onEdit} className="focus-ring flex h-9 flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-lg bg-slate-100 px-4 text-xs font-bold text-slate-900 transition hover:bg-slate-200 md:h-11 md:flex-none md:rounded-full md:bg-slate-950 md:text-white md:hover:bg-brand-700"><Pencil className="hidden h-3.5 w-3.5 md:block" />Edit profil</button>
+          ) : (
+            <>
+              <Link href="/messages" className="focus-ring order-2 flex h-9 flex-1 items-center justify-center gap-2 rounded-lg bg-slate-100 px-4 text-xs font-bold text-slate-700 transition hover:bg-slate-200 md:order-1 md:h-11 md:flex-none md:rounded-full md:border md:border-slate-200 md:bg-white md:hover:bg-slate-50"><MessageCircle className="hidden h-4 w-4 md:block" />Pesan</Link>
+              <button type="button" onClick={onToggleConnect} aria-pressed={connected} className={clsx("focus-ring order-1 flex h-9 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-3 text-xs font-bold transition md:order-2 md:h-11 md:flex-none md:gap-2 md:rounded-full md:px-4", connected ? "bg-emerald-50 text-emerald-700 hover:bg-emerald-100" : "bg-brand-600 text-white hover:bg-brand-700")}>{connected ? <Check className="h-3.5 w-3.5" /> : <UserPlus className="hidden h-3.5 w-3.5 md:block" />}{connected ? "Diminta" : "Hubungkan"}</button>
+            </>
+          )}
         </div>
 
-        <div className="mt-5 flex gap-6 border-t border-slate-100 pt-4 sm:gap-10">
-          {[[profile.stats.posts, "Postingan"], [profile.stats.connections, "Koneksi"], [profile.stats.following, "Mengikuti"]].map(([value, label]) => <button key={label} className="text-left"><b className="block text-sm font-black text-slate-900 sm:text-base">{value}</b><span className="text-[10px] font-medium text-slate-400 sm:text-xs">{label}</span></button>)}
+        <div className="col-start-2 row-start-1 grid min-w-0 grid-cols-3 gap-1 md:col-span-3 md:col-start-1 md:row-start-4 md:mt-5 md:flex md:gap-10 md:border-t md:border-slate-100 md:pt-4">
+          {[[profile.stats.posts, "Postingan"], [profile.stats.connections, "Koneksi"], [profile.stats.following, "Mengikuti"]].map(([value, label]) => <button key={label} type="button" className="min-w-0 text-center md:text-left"><b className="block text-base font-bold text-slate-900 md:font-black">{value}</b><span className="text-[10px] text-slate-600 min-[375px]:text-[11px] md:text-xs md:font-medium md:text-slate-400">{label}</span></button>)}
         </div>
       </div>
     </article>
   );
 }
 
-function ProfileFacts({ profile, className }: { profile: UserProfile; className?: string }) {
+function ProfileFacts({ profile, className, summary = false }: { profile: UserProfile; className?: string; summary?: boolean }) {
   return (
-    <div className={clsx("flex flex-wrap gap-x-4 gap-y-2 text-[11px] font-medium text-slate-500 sm:text-xs", className)}>
+    <div className={clsx("flex min-w-0 flex-wrap gap-x-4 text-[11px] font-medium text-slate-500 sm:text-xs", summary ? "flex-col items-start gap-y-1 md:flex-row md:items-center md:gap-y-2" : "gap-y-2", className)}>
       <span className="flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5 text-slate-400" />{profile.location}</span>
-      {profile.website && <a href={`https://${profile.website}`} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 font-bold text-brand-600 hover:underline"><Link2 className="h-3.5 w-3.5" />{profile.website}</a>}
-      <span className="flex items-center gap-1.5"><CalendarDays className="h-3.5 w-3.5 text-slate-400" />Bergabung {profile.joined}</span>
+      {profile.website && <a href={`https://${profile.website}`} target="_blank" rel="noreferrer" className="flex max-w-full items-center gap-1.5 font-bold text-brand-600 [overflow-wrap:anywhere] hover:underline"><Link2 className="h-3.5 w-3.5 shrink-0" />{profile.website}</a>}
+      <span className={clsx("items-center gap-1.5", summary ? "hidden md:flex" : "flex")}><CalendarDays className="h-3.5 w-3.5 text-slate-400" />Bergabung {profile.joined}</span>
     </div>
   );
 }
 
 function ProfileTabs({ active, onChange, profile, showIdentity }: { active: string; onChange: (value: string) => void; profile: UserProfile; showIdentity: boolean }) {
   return (
-    <div className="sticky top-16 z-20 mt-2 flex items-stretch border-y border-slate-200 bg-white/95 px-2 backdrop-blur-md md:rounded-2xl md:border md:px-3 md:shadow-card">
+    <div className="sticky top-16 z-20 flex items-stretch border-y border-slate-200 bg-white/95 backdrop-blur-md md:mt-2 md:rounded-2xl md:border md:px-3 md:shadow-card">
       {/* Desktop keeps the global header, so the profile identity slides into the tab bar instead. */}
       <button type="button" onClick={scrollToTop} inert={!showIdentity} aria-hidden={!showIdentity} aria-label={`Profil ${profile.name}, kembali ke atas`} className={clsx("focus-ring hidden shrink-0 items-center gap-2 overflow-hidden rounded-xl transition-all duration-300 ease-out motion-reduce:transition-none md:flex", showIdentity ? "my-1.5 mr-2 max-w-[240px] pl-1 pr-3 opacity-100" : "max-w-0 opacity-0")}>
         <Avatar src={profile.avatar} alt="" size="sm" />
@@ -267,7 +259,7 @@ function ProfileTabs({ active, onChange, profile, showIdentity }: { active: stri
         {profile.verified && <VerifiedBadge small />}
       </button>
       <div role="tablist" aria-label="Bagian profil" className="grid min-w-0 flex-1 grid-cols-4 md:px-2">
-        {[["postingan", "Postingan"], ["tentang", "Tentang"], ["perusahaan", "Perusahaan"], ["produk", "Produk"]].map(([id, label], index, tabs) => <button key={id} id={`profile-tab-${id}`} role="tab" aria-selected={active === id} aria-controls={`profile-panel-${id}`} tabIndex={active === id ? 0 : -1} onKeyDown={(event) => { const next = event.key === "ArrowRight" ? (index + 1) % tabs.length : event.key === "ArrowLeft" ? (index + tabs.length - 1) % tabs.length : event.key === "Home" ? 0 : event.key === "End" ? tabs.length - 1 : null; if (next !== null) { event.preventDefault(); onChange(tabs[next][0]); document.getElementById(`profile-tab-${tabs[next][0]}`)?.focus(); } }} onClick={() => onChange(id)} className={clsx("focus-ring relative flex-1 py-3.5 text-xs font-extrabold transition sm:flex-none sm:px-6", active === id ? "text-brand-700" : "text-slate-400 hover:text-slate-700")}>{label}{active === id && <span className="absolute inset-x-4 bottom-0 h-0.5 rounded-full bg-brand-600" />}</button>)}
+        {([["postingan", "Postingan", Grid3X3], ["tentang", "Tentang", UserRound], ["perusahaan", "Perusahaan", Building2], ["produk", "Produk", ShoppingBag]] as const).map(([id, label, Icon], index, tabs) => <button key={id} id={`profile-tab-${id}`} role="tab" title={label} aria-selected={active === id} aria-controls={`profile-panel-${id}`} tabIndex={active === id ? 0 : -1} onKeyDown={(event) => { const next = event.key === "ArrowRight" ? (index + 1) % tabs.length : event.key === "ArrowLeft" ? (index + tabs.length - 1) % tabs.length : event.key === "Home" ? 0 : event.key === "End" ? tabs.length - 1 : null; if (next !== null) { event.preventDefault(); onChange(tabs[next][0]); document.getElementById(`profile-tab-${tabs[next][0]}`)?.focus(); } }} onClick={() => onChange(id)} className={clsx("focus-ring relative flex min-h-12 flex-1 items-center justify-center py-3 text-xs font-extrabold transition md:min-h-0 md:px-6 md:py-3.5", active === id ? "text-slate-950 md:text-brand-700" : "text-slate-400 hover:text-slate-700")}><Icon aria-hidden="true" className="h-5 w-5 md:hidden" /><span className="sr-only md:not-sr-only">{label}</span>{active === id && <span className="absolute inset-x-0 bottom-0 h-0.5 bg-slate-950 md:inset-x-4 md:rounded-full md:bg-brand-600" />}</button>)}
       </div>
     </div>
   );

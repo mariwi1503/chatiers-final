@@ -19,7 +19,7 @@ const headerNavigation = [
 ] as const;
 
 /** `compact` swaps the mobile header bar for page-specific content, e.g. the profile being viewed. */
-export function AppHeader({ active, searchQuery, onSearchChange, searchPlaceholder = "Cari di Chatiers", compact }: { active?: HeaderSection; searchQuery?: string; onSearchChange?: (value: string) => void; searchPlaceholder?: string; compact?: { visible: boolean; content: ReactNode } }) {
+export function AppHeader({ active, searchQuery, onSearchChange, searchPlaceholder = "Cari di Chatiers", compact, mobileTitle }: { active?: HeaderSection; searchQuery?: string; onSearchChange?: (value: string) => void; searchPlaceholder?: string; compact?: { visible: boolean; content: ReactNode }; mobileTitle?: string }) {
   const [localSearch, setLocalSearch] = useState("");
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -48,9 +48,11 @@ export function AppHeader({ active, searchQuery, onSearchChange, searchPlacehold
       <div className="relative mx-auto flex h-16 max-w-[1200px] items-center gap-4 px-4">
         <button type="button" className={clsx("icon-button -ml-2 shrink-0 transition-opacity duration-200 lg:hidden", compactVisible && "max-md:opacity-0")} onClick={() => setMenuOpen(true)} aria-label="Buka menu" aria-expanded={menuOpen}><Menu className="h-5 w-5" /></button>
 
-        <Link href="/" aria-label="Kembali ke feed" className={clsx("flex shrink-0 items-center transition-opacity duration-200 max-md:absolute max-md:left-1/2 max-md:-translate-x-1/2", compactVisible && "max-md:opacity-0")}>
+        <Link href="/" aria-label="Kembali ke feed" className={clsx("flex shrink-0 items-center transition-opacity duration-200 max-md:absolute max-md:left-1/2 max-md:-translate-x-1/2", mobileTitle && "max-md:hidden", compactVisible && "max-md:opacity-0")}>
           <Logo compact className="w-[120px] shrink-0 md:w-[160px]" />
         </Link>
+
+        {mobileTitle && <p className={clsx("absolute left-1/2 max-w-[calc(100%-120px)] -translate-x-1/2 truncate text-base font-bold text-slate-950 transition-opacity duration-200 md:hidden", compactVisible && "opacity-0")}>{mobileTitle}</p>}
 
         <form className={clsx("min-w-0 max-w-[280px] flex-1 md:relative md:block", searchOpen ? "max-md:absolute max-md:inset-0 max-md:z-10 max-md:flex max-md:max-w-none max-md:items-center max-md:gap-2 max-md:bg-white max-md:px-4" : "hidden")} role="search" onSubmit={(event) => event.preventDefault()}>
           <div className="relative min-w-0 flex-1">

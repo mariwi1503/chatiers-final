@@ -26,8 +26,6 @@ export type UserProfile = {
   website?: string;
   joined: string;
   verified?: boolean;
-  /** Cover photo; profiles without one use the default gradient. */
-  cover?: string;
   stats: { posts: string; connections: string; following: string };
   experience: Experience[];
   skills: string[];
@@ -94,7 +92,6 @@ export const otherUsers: UserProfile[] = [
     website: "sneakerhead.id",
     joined: "Februari 2023",
     verified: true,
-    cover: unsplash("1556906781-9a412961c28c", "w=1600&h=600"),
     stats: { posts: "342", connections: "2.917", following: "418" },
     experience: [
       { title: "Founder & Owner", company: "Sneakerhead ID", type: "Wiraswasta", period: "2018 – Sekarang", location: "Jakarta Selatan" },
@@ -129,7 +126,6 @@ export const otherUsers: UserProfile[] = [
     website: "nadiaputri.studio",
     joined: "Agustus 2022",
     verified: true,
-    cover: unsplash("1507238691740-187a5b1d37b8", "w=1600&h=600"),
     stats: { posts: "516", connections: "4.102", following: "735" },
     experience: [
       { title: "Lead Product Designer", company: "Rupa Studio", type: "Penuh waktu", period: "2021 – Sekarang", location: "Bandung" },
@@ -162,7 +158,6 @@ export const otherUsers: UserProfile[] = [
     location: "Jakarta Barat",
     website: "sitirahma.dev",
     joined: "Januari 2024",
-    cover: unsplash("1531297484001-80022131f5a1", "w=1600&h=600"),
     stats: { posts: "89", connections: "1.530", following: "264" },
     experience: [
       { title: "Software Engineer", company: "Tokopedia", type: "Penuh waktu", period: "2021 – Sekarang", location: "Jakarta" },
@@ -188,7 +183,6 @@ export const otherUsers: UserProfile[] = [
     bio: "Membangun produk kecil yang menyelesaikan masalah nyata. Saat ini sedang mengembangkan Seduh Bareng, kedai kopi sekaligus ruang kolaborasi untuk komunitas kreatif.",
     location: "Yogyakarta",
     joined: "Oktober 2023",
-    cover: unsplash("1495474472287-4d71bcdd2085", "w=1600&h=600"),
     stats: { posts: "203", connections: "1.876", following: "590" },
     experience: [
       { title: "Founder", company: "Seduh Bareng", type: "Wiraswasta", period: "2023 – Sekarang", location: "Yogyakarta" },
