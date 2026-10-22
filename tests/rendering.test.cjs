@@ -6,6 +6,7 @@ const { createRequire } = require("node:module");
 const ts = require("typescript");
 const React = require("react");
 const { renderToString } = require("react-dom/server");
+const { AppRouterContext } = require("next/dist/shared/lib/app-router-context.shared-runtime");
 
 // Load the real component tree, resolving the app's TypeScript imports and aliases.
 const root = path.resolve(__dirname, "..");
@@ -35,7 +36,16 @@ const data = loadSource(path.join(root, "src/lib/data.ts"));
 const { formatProductPrice } = loadSource(path.join(root, "src/lib/storefront.ts"));
 const { StorefrontProvider } = loadSource(path.join(root, "src/components/storefront-provider.tsx"));
 const { ChatiersApp } = loadSource(path.join(root, "src/components/chatiers-app.tsx"));
-const renderFeed = () => renderToString(React.createElement(StorefrontProvider, null, React.createElement(ChatiersApp)));
+// Server rendering needs the router context, but must never trigger navigation.
+const unexpectedNavigation = () => assert.fail("Navigation during server rendering");
+const router = {
+  back: unexpectedNavigation, forward: unexpectedNavigation,
+  refresh: unexpectedNavigation, push: unexpectedNavigation,
+  replace: unexpectedNavigation, prefetch: unexpectedNavigation,
+  bfcacheId: "render-test",
+};
+const renderFeed = () => renderToString(React.createElement(AppRouterContext.Provider, { value: router },
+  React.createElement(StorefrontProvider, null, React.createElement(ChatiersApp))));
 
 test("feed renders service and rental filters with their prices", () => {
   const html = renderFeed();

@@ -1,9 +1,10 @@
 "use client";
 
-import { Bell, ChevronDown, Menu, MessageCircle, Newspaper, Search, Users } from "lucide-react";
+import { Bell, ChevronDown, Menu, MessageCircle, Newspaper, Users } from "lucide-react";
 import clsx from "clsx";
 import Link from "next/link";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
+import { HeaderSearch } from "@/components/header-search";
 import { Avatar } from "@/components/avatar";
 import { Logo } from "@/components/logo";
 import { MobileMenu } from "@/components/mobile-menu";
@@ -20,27 +21,9 @@ const headerNavigation = [
 
 /** `compact` swaps the mobile header bar for page-specific content, e.g. the profile being viewed. */
 export function AppHeader({ active, searchQuery, onSearchChange, searchPlaceholder = "Cari di Chatiers", compact, mobileTitle }: { active?: HeaderSection; searchQuery?: string; onSearchChange?: (value: string) => void; searchPlaceholder?: string; compact?: { visible: boolean; content: ReactNode }; mobileTitle?: string }) {
-  const [localSearch, setLocalSearch] = useState("");
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [searchOpen, setSearchOpen] = useState(false);
-  const searchInput = useRef<HTMLInputElement>(null);
-  const value = searchQuery ?? localSearch;
   const compactVisible = Boolean(compact?.visible);
-
-  useEffect(() => {
-    if (searchOpen) searchInput.current?.focus();
-  }, [searchOpen]);
-
-  function closeSearch() {
-    changeSearch("");
-    setSearchOpen(false);
-  }
-
-  function changeSearch(nextValue: string) {
-    if (onSearchChange) onSearchChange(nextValue);
-    else setLocalSearch(nextValue);
-  }
 
   return (
     <>
@@ -54,13 +37,7 @@ export function AppHeader({ active, searchQuery, onSearchChange, searchPlacehold
 
         {mobileTitle && <p className={clsx("absolute left-1/2 max-w-[calc(100%-120px)] -translate-x-1/2 truncate text-base font-bold text-slate-950 transition-opacity duration-200 md:hidden", compactVisible && "opacity-0")}>{mobileTitle}</p>}
 
-        <form className={clsx("min-w-0 max-w-[280px] flex-1 md:relative md:block", searchOpen ? "max-md:absolute max-md:inset-0 max-md:z-10 max-md:flex max-md:max-w-none max-md:items-center max-md:gap-2 max-md:bg-white max-md:px-4" : "hidden")} role="search" onSubmit={(event) => event.preventDefault()}>
-          <div className="relative min-w-0 flex-1">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-          <input ref={searchInput} type="search" value={value} onKeyDown={(event) => event.key === "Escape" && closeSearch()} onChange={(event) => changeSearch(event.target.value)} placeholder={searchPlaceholder} aria-label={searchPlaceholder} className="focus-ring h-10 w-full rounded-full border border-slate-200 bg-slate-100/80 pl-9 pr-4 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 hover:bg-slate-100 focus:border-brand-300 focus:bg-white" />
-          </div>
-          <button type="button" onClick={closeSearch} className="shrink-0 rounded-full px-2 py-2 text-sm font-semibold text-brand-600 md:hidden">Batal</button>
-        </form>
+        <HeaderSearch value={searchQuery ?? ""} onChange={onSearchChange} placeholder={searchPlaceholder} compact={compactVisible} />
 
         {compact && (
           <div inert={!compactVisible} aria-hidden={!compactVisible} className={clsx("absolute inset-0 z-20 flex items-center gap-1 px-2 transition duration-200 ease-out motion-reduce:transition-none md:hidden", compactVisible ? "translate-y-0 opacity-100" : "pointer-events-none translate-y-2 opacity-0")}>
@@ -69,10 +46,6 @@ export function AppHeader({ active, searchQuery, onSearchChange, searchPlacehold
         )}
 
         <div className="ml-auto flex h-full items-center gap-1">
-          <button type="button" className={clsx("icon-button relative -mr-2 transition-opacity duration-200 md:hidden", compactVisible && "opacity-0")} onClick={() => setSearchOpen(true)} aria-label={searchPlaceholder} aria-expanded={searchOpen}>
-            <Search className="h-5 w-5" />
-            {value && <span className="absolute right-2 top-2 h-2 w-2 rounded-full border-2 border-white bg-brand-600" />}
-          </button>
           <nav className="hidden h-full items-stretch lg:flex" aria-label="Navigasi utama">
             {headerNavigation.map((item) => {
               const isActive = item.id === active;

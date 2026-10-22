@@ -179,6 +179,10 @@ export function ChatiersApp() {
   const [activeCategory, setActiveCategory] = useState<"all" | PostCategory>("all");
   const [selectedCity, setSelectedCity] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+  useEffect(() => {
+    const query = new URLSearchParams(window.location.search).get("q");
+    if (query) setSearchQuery(query);
+  }, []);
   const { posts, setPosts, findProduct } = useStorefront();
   const [composerOpen, setComposerOpen] = useState(false);
   const composerRef = useRef<HTMLDivElement>(null);
