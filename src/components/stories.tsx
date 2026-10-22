@@ -193,7 +193,7 @@ export function Stories({ onToast }: { onToast: (message: string) => void }) {
             const allViewed = hasStories && story.items.every((item) => item.viewed);
 
             return (
-              <div key={story.id} className="relative w-[62px] shrink-0">
+              <div key={story.id} className="relative w-[76px] shrink-0">
                 <button
                   type="button"
                   onClick={() => openStory(groupIndex)}
@@ -202,7 +202,7 @@ export function Stories({ onToast }: { onToast: (message: string) => void }) {
                 >
                   <span
                     className={clsx(
-                      "relative rounded-full p-[3px] transition",
+                      "relative flex h-[76px] w-[76px] shrink-0 items-center justify-center rounded-full p-[3px] transition",
                       !hasStories || story.own
                         ? "bg-slate-100"
                         : allViewed
@@ -210,7 +210,7 @@ export function Stories({ onToast }: { onToast: (message: string) => void }) {
                           : "bg-gradient-to-tr from-violet-600 via-brand-500 to-cyan-400"
                     )}
                   >
-                    <Avatar src={story.avatar} alt={story.name} size="xl" className="rounded-full border-[3px] border-white transition group-hover:scale-105" />
+                    <Avatar src={story.avatar} alt={story.name} size="xl" className="overflow-hidden rounded-full border-[3px] border-white" />
                   </span>
                   <span className={clsx("w-full truncate text-center text-[10px] font-semibold", allViewed ? "text-slate-400" : "text-slate-600")}>{story.name}</span>
                 </button>
@@ -220,7 +220,7 @@ export function Stories({ onToast }: { onToast: (message: string) => void }) {
                     type="button"
                     onClick={() => setComposerOpen(true)}
                     aria-label="Tambah cerita baru"
-                    className="focus-ring absolute right-[-1px] top-11 flex h-6 w-6 items-center justify-center rounded-full border-2 border-white bg-brand-600 text-white shadow-sm transition hover:bg-brand-700"
+                    className="focus-ring absolute right-0 top-[52px] flex h-6 w-6 items-center justify-center rounded-full border-2 border-white bg-brand-600 text-white shadow-sm transition hover:bg-brand-700"
                   >
                     <Plus className="h-3.5 w-3.5" />
                   </button>
@@ -439,7 +439,7 @@ function StoryViewer({
             </div>
 
             <div className="mt-3 flex items-center gap-2.5 text-white">
-              <Avatar src={group.avatar} alt={group.name} size="sm" className="ring-2 ring-white/80" />
+              <Avatar src={group.avatar} alt={group.name} size="sm" className="rounded-full ring-2 ring-white/80" />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-xs font-extrabold">{group.name}</p>
                 <p className="mt-0.5 flex items-center gap-1 text-[10px] text-white/70"><AudienceIcon className="h-3 w-3" />{item.time} · {audienceLabel}</p>
@@ -485,7 +485,7 @@ function StoryPreviewCard({ entry, onSelect, far }: { entry: StoryEntry; onSelec
       <img src={entry.item.mediaUrl} alt={`Pratinjau cerita ${entry.group.name}`} className="relative h-full w-full object-contain opacity-70 transition group-hover:opacity-85" />
       <span className="absolute inset-0 bg-black/35 transition group-hover:bg-black/20" />
       <span className="absolute inset-0 flex flex-col items-center justify-center px-3">
-        <span className="rounded-full bg-gradient-to-tr from-violet-600 via-brand-500 to-cyan-400 p-0.5"><Avatar src={entry.group.avatar} alt={entry.group.name} size="lg" className="border-2 border-[#191919]" /></span>
+        <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-gradient-to-tr from-violet-600 via-brand-500 to-cyan-400 p-0.5"><Avatar src={entry.group.avatar} alt={entry.group.name} size="lg" className="overflow-hidden rounded-full border-2 border-[#191919]" /></span>
         <b className="mt-3 max-w-full truncate text-xs drop-shadow">{entry.group.name}</b>
         <span className="mt-1 text-[10px] text-white/75">{entry.item.time}</span>
       </span>
