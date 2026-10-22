@@ -262,6 +262,24 @@ export function getPostTitle(post: Post) {
   }
 }
 
+// Demo-only counts; kept separate from persisted post data.
+export const demoPostViews: Readonly<Partial<Record<number, number>>> = {
+  1: 1248,
+  2: 986,
+  3: 2430,
+  4: 1875,
+  5: 4820,
+  6: 1120,
+  7: 654,
+  8: 1690,
+  9: 532,
+  10: 748,
+  11: 415,
+  12: 326,
+  13: 218,
+  14: 294,
+};
+
 export const posts: Post[] = [
   {
     id: 13,

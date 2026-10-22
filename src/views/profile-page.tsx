@@ -9,6 +9,7 @@ import {
   Check,
   ChevronDown,
   CircleEllipsis,
+  Eye,
   Globe2,
   Grid3X3,
   Heart,
@@ -36,7 +37,7 @@ import { suggestions } from "@/lib/data";
 import { CompanyPanel, CompanyView, ProductsPanel } from "@/components/profile-storefront";
 import { ProductReference } from "@/components/product-reference";
 import { useStorefront } from "@/components/storefront-provider";
-import { ownProfile, type ProfilePost as ProfilePostData, type UserProfile } from "@/lib/users";
+import { demoProfileViews, ownProfile, type ProfilePost as ProfilePostData, type UserProfile } from "@/lib/users";
 
 type ProfileState = Pick<UserProfile, "name" | "handle" | "role" | "bio" | "location">;
 
@@ -245,6 +246,7 @@ function ProfileFacts({ profile, className, summary = false }: { profile: UserPr
       <span className="flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5 text-slate-400" />{profile.location}</span>
       {profile.website && <a href={`https://${profile.website}`} target="_blank" rel="noreferrer" className="flex max-w-full items-center gap-1.5 font-bold text-brand-600 [overflow-wrap:anywhere] hover:underline"><Link2 className="h-3.5 w-3.5 shrink-0" />{profile.website}</a>}
       <span className={clsx("items-center gap-1.5", summary ? "hidden md:flex" : "flex")}><CalendarDays className="h-3.5 w-3.5 text-slate-400" />Bergabung {profile.joined}</span>
+      <span className="flex items-center gap-1.5"><Eye aria-hidden="true" className="h-3.5 w-3.5 text-slate-400" /><span><span className="font-semibold text-slate-700">{(demoProfileViews[profile.username] ?? 0).toLocaleString("id-ID")}</span> tayangan profil</span></span>
     </div>
   );
 }

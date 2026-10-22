@@ -36,6 +36,15 @@ export type UserProfile = {
 
 const unsplash = (id: string, size = "w=800&h=800") => `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&${size}&q=85`;
 
+// Demo-only counts, consistent with demoPostViews; not live visit tracking.
+export const demoProfileViews: Readonly<Partial<Record<string, number>>> = {
+  [currentUser.username]: 3842,
+  rianardiansyah: 5920,
+  nadiaputri: 8176,
+  sitirahma: 2460,
+  dimassurya: 4318,
+};
+
 // The signed-in user. Their company and products live in the editable storefront store instead.
 export const ownProfile: UserProfile = {
   username: currentUser.username,

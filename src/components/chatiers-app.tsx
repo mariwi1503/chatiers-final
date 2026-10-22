@@ -8,6 +8,7 @@ import {
   ChevronLeft,
   ChevronRight,
   CircleEllipsis,
+  Eye,
   FileText,
   Heart,
   Image as ImageIcon,
@@ -44,6 +45,7 @@ import {
   contacts,
   currentUser,
   getPostTitle,
+  demoPostViews,
   postCategories,
   quickActions,
   suggestions,
@@ -80,45 +82,47 @@ type CommentReplyTarget = {
   text: string;
 };
 
+const inactiveCategoryStyle = "bg-slate-50 text-slate-600 ring-1 ring-slate-200 hover:bg-slate-100 hover:text-slate-800";
+
 const categoryStyles: Record<"all" | PostCategory, { active: string; inactive: string; badge: string }> = {
   all: {
-    active: "bg-ink text-white shadow-sm",
-    inactive: "bg-slate-50 text-slate-600 ring-1 ring-slate-200 hover:bg-slate-100 hover:text-slate-800",
+    active: "bg-slate-100 text-slate-950 ring-1 ring-slate-300",
+    inactive: inactiveCategoryStyle,
     badge: "bg-slate-100 text-slate-700 ring-slate-200",
   },
   thread: {
-    active: "bg-brand-600 text-white shadow-sm shadow-brand-200",
-    inactive: "bg-brand-50 text-brand-700 ring-1 ring-brand-100 hover:bg-brand-100",
+    active: "bg-brand-50 text-brand-700 ring-1 ring-brand-200 hover:bg-brand-100",
+    inactive: inactiveCategoryStyle,
     badge: "bg-brand-50 text-brand-700 ring-brand-100",
   },
   sell: {
-    active: "bg-violet-600 text-white shadow-sm shadow-violet-200",
-    inactive: "bg-violet-50 text-violet-700 ring-1 ring-violet-100 hover:bg-violet-100",
+    active: "bg-violet-50 text-violet-700 ring-1 ring-violet-200 hover:bg-violet-100",
+    inactive: inactiveCategoryStyle,
     badge: "bg-violet-50 text-violet-700 ring-violet-100",
   },
   buy: {
-    active: "bg-rose-600 text-white shadow-sm shadow-rose-200",
-    inactive: "bg-rose-50 text-rose-700 ring-1 ring-rose-100 hover:bg-rose-100",
+    active: "bg-rose-50 text-rose-700 ring-1 ring-rose-200 hover:bg-rose-100",
+    inactive: inactiveCategoryStyle,
     badge: "bg-rose-50 text-rose-700 ring-rose-100",
   },
   service: {
-    active: "bg-amber-600 text-white shadow-sm shadow-amber-200",
-    inactive: "bg-amber-50 text-amber-700 ring-1 ring-amber-100 hover:bg-amber-100",
+    active: "bg-amber-50 text-amber-700 ring-1 ring-amber-200 hover:bg-amber-100",
+    inactive: inactiveCategoryStyle,
     badge: "bg-amber-50 text-amber-700 ring-amber-100",
   },
   rental: {
-    active: "bg-indigo-600 text-white shadow-sm shadow-indigo-200",
-    inactive: "bg-indigo-50 text-indigo-700 ring-1 ring-indigo-100 hover:bg-indigo-100",
+    active: "bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200 hover:bg-indigo-100",
+    inactive: inactiveCategoryStyle,
     badge: "bg-indigo-50 text-indigo-700 ring-indigo-100",
   },
   vacancy: {
-    active: "bg-cyan-600 text-white shadow-sm shadow-cyan-200",
-    inactive: "bg-cyan-50 text-cyan-700 ring-1 ring-cyan-100 hover:bg-cyan-100",
+    active: "bg-cyan-50 text-cyan-700 ring-1 ring-cyan-200 hover:bg-cyan-100",
+    inactive: inactiveCategoryStyle,
     badge: "bg-cyan-50 text-cyan-700 ring-cyan-100",
   },
   "job-search": {
-    active: "bg-emerald-600 text-white shadow-sm shadow-emerald-200",
-    inactive: "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100 hover:bg-emerald-100",
+    active: "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200 hover:bg-emerald-100",
+    inactive: inactiveCategoryStyle,
     badge: "bg-emerald-50 text-emerald-700 ring-emerald-100",
   },
 };
@@ -866,6 +870,10 @@ function PostDetailScreen({
                 <article className="bg-white md:rounded-2xl md:border md:border-slate-200/80 md:shadow-card">
                   <div className="p-4">
                     <PostContent post={post} authorRef={authorRef} />
+                    <p className="mt-4 flex items-center gap-1.5 text-xs text-slate-500">
+                      <Eye aria-hidden="true" className="h-4 w-4" />
+                      <span><span className="font-semibold text-slate-700">{(demoPostViews[post.id] ?? 0).toLocaleString("id-ID")}</span> tayangan</span>
+                    </p>
                   </div>
                   <PostActions post={post} onComment={focusComposer} {...actions} />
 
