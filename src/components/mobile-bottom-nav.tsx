@@ -3,14 +3,84 @@
 import { Bell, MessageCircle, Newspaper, UserRound } from "lucide-react";
 import clsx from "clsx";
 import Link from "next/link";
-import { useState } from "react";
+import { usePathname } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
 import { NotificationList } from "@/components/notifications";
 
 type BottomSection = "feed" | "messages" | "profile";
 
+const TOP_REVEAL_Y = 64;
+const HIDE_AFTER_Y = 160;
+const HIDE_SCROLL_DISTANCE = 80;
+const SHOW_SCROLL_DISTANCE = 16;
+
 export function MobileBottomNav({ active, messagesBadge = true }: { active?: BottomSection; messagesBadge?: boolean }) {
+  const pathname = usePathname();
+  const navRef = useRef<HTMLElement>(null);
+  const [hidden, setHidden] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [notificationsSeen, setNotificationsSeen] = useState(false);
+  const navHidden = hidden && !notificationsOpen;
+
+  useEffect(() => {
+    const mobile = window.matchMedia("(max-width: 767px)");
+    // Clamp Safari's overscroll so bouncing at either edge cannot reverse the direction.
+    const scrollY = () => Math.max(0, Math.min(window.scrollY, document.documentElement.scrollHeight - window.innerHeight));
+    let previousY = scrollY();
+    let direction = 0;
+    let distance = 0;
+    let frame = 0;
+
+    function reveal() {
+      setHidden(false);
+      previousY = scrollY();
+      direction = 0;
+      distance = 0;
+    }
+
+    function update() {
+      frame = 0;
+      const currentY = scrollY();
+      const focused = document.activeElement;
+      if (!mobile.matches || notificationsOpen || currentY <= TOP_REVEAL_Y || (navRef.current?.contains(focused) && focused?.matches(":focus-visible"))) {
+        reveal();
+        return;
+      }
+      const delta = currentY - previousY;
+      if (Math.abs(delta) < 2) return;
+      previousY = currentY;
+      const nextDirection = delta > 0 ? 1 : -1;
+      distance = nextDirection === direction ? distance + Math.abs(delta) : Math.abs(delta);
+      direction = nextDirection;
+
+      if (direction === 1 && currentY > HIDE_AFTER_Y && distance >= HIDE_SCROLL_DISTANCE) {
+        setHidden(true);
+        distance = 0;
+      } else if (direction === -1 && distance >= SHOW_SCROLL_DISTANCE) {
+        setHidden(false);
+        distance = 0;
+      }
+    }
+
+    function onScroll() {
+      if (!frame) frame = window.requestAnimationFrame(update);
+    }
+
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Tab") reveal();
+    }
+
+    reveal();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("keydown", onKeyDown);
+    mobile.addEventListener("change", reveal);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("keydown", onKeyDown);
+      mobile.removeEventListener("change", reveal);
+    };
+  }, [pathname, notificationsOpen]);
 
   function openNotifications() {
     setNotificationsOpen(true);
@@ -19,8 +89,8 @@ export function MobileBottomNav({ active, messagesBadge = true }: { active?: Bot
 
   return (
     <>
-      <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 px-3 pb-[max(8px,env(safe-area-inset-bottom))] pt-2 backdrop-blur-xl md:hidden">
-        <div className="grid grid-cols-4 items-end">
+      <nav ref={navRef} aria-label="Navigasi bawah" aria-hidden={navHidden} inert={navHidden} onFocusCapture={() => setHidden(false)} className={clsx("fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 px-3 pb-[calc(4px+env(safe-area-inset-bottom))] pt-1 backdrop-blur-xl transition-[transform,opacity] motion-reduce:transition-none motion-reduce:duration-0 md:hidden", navHidden ? "pointer-events-none translate-y-[calc(100%+2px)] opacity-0 duration-200 ease-in" : "translate-y-0 opacity-100 duration-300 ease-out")}>
+        <div className="grid grid-cols-4">
           <BottomItem icon={Newspaper} label="Feed" href="/" active={active === "feed"} />
           <BottomItem icon={MessageCircle} label="Pesan" href="/messages" active={active === "messages"} badge={messagesBadge} />
           <BottomItem icon={Bell} label="Notifikasi" active={notificationsOpen} badge={!notificationsSeen} onClick={openNotifications} />
@@ -41,9 +111,9 @@ export function MobileBottomNav({ active, messagesBadge = true }: { active?: Bot
 }
 
 function BottomItem({ icon: Icon, label, active, badge, href, onClick }: { icon: typeof Newspaper; label: string; active?: boolean; badge?: boolean; href?: string; onClick?: () => void }) {
-  const className = clsx("relative flex flex-col items-center gap-1 py-1 text-[11px] font-semibold", active ? "text-brand-600" : "text-slate-400");
+  const className = clsx("focus-ring relative flex h-11 min-w-0 flex-col items-center justify-center gap-0.5 rounded-xl text-[10px] font-semibold leading-3 transition-colors", active ? "text-brand-600" : "text-slate-500");
   const content = <>
-    <span className={clsx("relative flex h-7 w-10 items-center justify-center rounded-full", active && "bg-brand-50")}><Icon className={clsx("h-5 w-5", active && "fill-brand-100")} />{badge && <span className="absolute right-1 top-0 h-2 w-2 rounded-full border border-white bg-rose-500" />}</span>
+    <span className={clsx("relative flex h-6 w-9 items-center justify-center rounded-full", active && "bg-brand-50")}><Icon className={clsx("h-[18px] w-[18px]", active && "fill-brand-100")} />{badge && <span className="absolute right-1 top-0 h-2 w-2 rounded-full border border-white bg-rose-500" />}</span>
     {label}
   </>;
   if (href) return <Link href={href} aria-current={active ? "page" : undefined} className={className}>{content}</Link>;

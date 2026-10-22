@@ -138,7 +138,7 @@ export function MessagesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-20 md:pb-0">
+    <div className="min-h-screen bg-slate-50 pb-[calc(56px+env(safe-area-inset-bottom))] md:pb-0">
       <AppHeader active="messages" />
 
       <main className="mx-auto w-full max-w-[1200px] md:px-4 md:py-4">
