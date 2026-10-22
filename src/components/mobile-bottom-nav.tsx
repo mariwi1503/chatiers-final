@@ -6,6 +6,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { NotificationList } from "@/components/notifications";
+import { currentUser } from "@/lib/data";
 
 type BottomSection = "feed" | "messages" | "profile";
 
@@ -94,7 +95,7 @@ export function MobileBottomNav({ active, messagesBadge = true }: { active?: Bot
           <BottomItem icon={Newspaper} label="Feed" href="/" active={active === "feed"} />
           <BottomItem icon={MessageCircle} label="Pesan" href="/messages" active={active === "messages"} badge={messagesBadge} />
           <BottomItem icon={Bell} label="Notifikasi" active={notificationsOpen} badge={!notificationsSeen} onClick={openNotifications} />
-          <BottomItem icon={UserRound} label="Profil" href="/profile" active={active === "profile"} />
+          <BottomItem icon={UserRound} label="Profil" href="/profile" active={active === "profile"} avatarSrc={currentUser?.avatar} />
         </div>
       </nav>
 
@@ -110,10 +111,18 @@ export function MobileBottomNav({ active, messagesBadge = true }: { active?: Bot
   );
 }
 
-function BottomItem({ icon: Icon, label, active, badge, href, onClick }: { icon: typeof Newspaper; label: string; active?: boolean; badge?: boolean; href?: string; onClick?: () => void }) {
+function BottomItem({ icon: Icon, label, active, badge, href, onClick, avatarSrc }: { icon: typeof Newspaper; label: string; active?: boolean; badge?: boolean; href?: string; onClick?: () => void; avatarSrc?: string }) {
+  const [failedAvatarSrc, setFailedAvatarSrc] = useState<string>();
   const className = clsx("focus-ring relative flex h-11 min-w-0 flex-col items-center justify-center gap-0.5 rounded-xl text-[10px] font-semibold leading-3 transition-colors", active ? "text-brand-600" : "text-slate-500");
   const content = <>
-    <span className={clsx("relative flex h-6 w-9 items-center justify-center rounded-full", active && "bg-brand-50")}><Icon className={clsx("h-[18px] w-[18px]", active && "fill-brand-100")} />{badge && <span className="absolute right-1 top-0 h-2 w-2 rounded-full border border-white bg-rose-500" />}</span>
+    <span className={clsx("relative flex h-6 w-9 items-center justify-center rounded-full", active && "bg-brand-50")}>
+      {avatarSrc && avatarSrc !== failedAvatarSrc ? (
+        <img src={avatarSrc} alt="" width={24} height={24} onError={() => setFailedAvatarSrc(avatarSrc)} className={clsx("h-6 w-6 rounded-full bg-slate-100 object-cover", active && "ring-2 ring-brand-500 ring-offset-1")} />
+      ) : (
+        <Icon className={clsx("h-[18px] w-[18px]", active && "fill-brand-100")} />
+      )}
+      {badge && <span className="absolute right-1 top-0 h-2 w-2 rounded-full border border-white bg-rose-500" />}
+    </span>
     {label}
   </>;
   if (href) return <Link href={href} aria-current={active ? "page" : undefined} className={className}>{content}</Link>;
