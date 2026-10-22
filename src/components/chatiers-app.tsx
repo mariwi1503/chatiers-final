@@ -5,6 +5,8 @@ import {
   Bookmark,
   CalendarDays,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   CircleEllipsis,
   FileText,
   Heart,
@@ -41,9 +43,12 @@ import {
   categories,
   contacts,
   currentUser,
+  getPostTitle,
   postCategories,
   quickActions,
   suggestions,
+  rentalPeriods,
+  servicePriceUnits,
   trending,
   type Post,
   type PostAttachment,
@@ -53,8 +58,11 @@ import {
   type PostDetails,
   type PostImage,
   type PricingType,
+  type RentalPeriod,
+  type ServicePriceUnit,
 } from "@/lib/data";
 import { findUserByName, getProfileHref } from "@/lib/users";
+import { formatProductPrice } from "@/lib/storefront";
 
 type ComposerPayload = {
   category: PostCategory;
@@ -72,10 +80,10 @@ type CommentReplyTarget = {
   text: string;
 };
 
-const categoryStyles: Record<string, { active: string; inactive: string; badge: string }> = {
+const categoryStyles: Record<"all" | PostCategory, { active: string; inactive: string; badge: string }> = {
   all: {
     active: "bg-ink text-white shadow-sm",
-    inactive: "text-slate-500 hover:bg-slate-100 hover:text-slate-800",
+    inactive: "bg-slate-50 text-slate-600 ring-1 ring-slate-200 hover:bg-slate-100 hover:text-slate-800",
     badge: "bg-slate-100 text-slate-700 ring-slate-200",
   },
   thread: {
@@ -93,6 +101,16 @@ const categoryStyles: Record<string, { active: string; inactive: string; badge: 
     inactive: "bg-rose-50 text-rose-700 ring-1 ring-rose-100 hover:bg-rose-100",
     badge: "bg-rose-50 text-rose-700 ring-rose-100",
   },
+  service: {
+    active: "bg-amber-600 text-white shadow-sm shadow-amber-200",
+    inactive: "bg-amber-50 text-amber-700 ring-1 ring-amber-100 hover:bg-amber-100",
+    badge: "bg-amber-50 text-amber-700 ring-amber-100",
+  },
+  rental: {
+    active: "bg-indigo-600 text-white shadow-sm shadow-indigo-200",
+    inactive: "bg-indigo-50 text-indigo-700 ring-1 ring-indigo-100 hover:bg-indigo-100",
+    badge: "bg-indigo-50 text-indigo-700 ring-indigo-100",
+  },
   vacancy: {
     active: "bg-cyan-600 text-white shadow-sm shadow-cyan-200",
     inactive: "bg-cyan-50 text-cyan-700 ring-1 ring-cyan-100 hover:bg-cyan-100",
@@ -104,6 +122,11 @@ const categoryStyles: Record<string, { active: string; inactive: string; badge: 
     badge: "bg-emerald-50 text-emerald-700 ring-emerald-100",
   },
 };
+
+function getCategoryStyles(category: "all" | PostCategory) {
+  // A cached client or restored post may contain a category without a style yet.
+  return categoryStyles[category] ?? categoryStyles.thread;
+}
 
 function formatPostTime(time: string) {
   const match = time.trim().match(/^(\d+)\s*(menit|jam|hari)$/i);
@@ -123,9 +146,13 @@ function getPostCategoryLabel(category: PostCategory) {
   return postCategories.find((item) => item.id === category)?.label ?? "Utas";
 }
 
+function getPostCity(location?: string) {
+  return location?.split(/[,·]/)[0].trim().replace(/\s+/g, " ") ?? "";
+}
+
 function formatRupiah(value?: number) {
   if (value === undefined) return undefined;
-  return new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(value);
+  return formatProductPrice(value);
 }
 
 function formatFileSize(bytes: number) {
@@ -149,10 +176,12 @@ function countLoadedComments(comments: PostComment[]) {
 }
 
 export function ChatiersApp() {
-  const [activeCategory, setActiveCategory] = useState("all");
+  const [activeCategory, setActiveCategory] = useState<"all" | PostCategory>("all");
+  const [selectedCity, setSelectedCity] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const { posts, setPosts, findProduct } = useStorefront();
   const [composerOpen, setComposerOpen] = useState(false);
+  const composerRef = useRef<HTMLDivElement>(null);
   const [chatOpen, setChatOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [detail, setDetail] = useState<{ id: number; focusComment: boolean } | null>(null);
@@ -160,19 +189,32 @@ export function ChatiersApp() {
   const detailCloseTimerRef = useRef<number | undefined>(undefined);
   const feedScrollRef = useRef(0);
 
+  const cities = useMemo(() => {
+    const names = new Map<string, string>();
+    for (const post of posts) {
+      const city = getPostCity(post.location);
+      if (city) names.set(city.toLocaleLowerCase("id-ID"), city);
+    }
+    return Array.from(names, ([value, label]) => ({ value, label }))
+      .sort((a, b) => a.label.localeCompare(b.label, "id-ID"));
+  }, [posts]);
+
   const filteredPosts = useMemo(() => {
-    const categoryPosts = activeCategory === "all" ? posts : posts.filter((post) => post.category === activeCategory);
+    const categoryPosts = posts.filter((post) =>
+      (activeCategory === "all" || post.category === activeCategory)
+      && (!selectedCity || getPostCity(post.location).toLocaleLowerCase("id-ID") === selectedCity)
+    );
     const query = searchQuery.trim().toLocaleLowerCase("id-ID");
 
     if (!query) return categoryPosts;
 
     return categoryPosts.filter((post) => {
       const product = post.productId ? findProduct(post.productId)?.product : undefined;
-      return [post.author, post.role, post.text, getPostCategoryLabel(post.category), product?.name ?? "", product?.category ?? ""].some((value) =>
+      return [post.author, post.role, post.text, getPostTitle(post), getPostCategoryLabel(post.category), product?.name ?? "", product?.category ?? ""].some((value) =>
         value.toLocaleLowerCase("id-ID").includes(query)
       );
     });
-  }, [activeCategory, posts, findProduct, searchQuery]);
+  }, [activeCategory, selectedCity, posts, findProduct, searchQuery]);
 
   useEffect(() => {
     const url = new URL(window.location.href);
@@ -295,7 +337,7 @@ export function ChatiersApp() {
   }
 
   return (
-    <div className="min-h-screen pb-20 md:pb-0">
+    <div className="min-h-screen pb-[calc(56px+env(safe-area-inset-bottom))] md:pb-0">
       <AppHeader
         active="feed"
         searchQuery={searchQuery}
@@ -308,17 +350,30 @@ export function ChatiersApp() {
         <section className="w-full min-w-0 pb-10 md:max-w-[680px] md:justify-self-center md:pt-4 lg:max-w-none">
           <div className={clsx(detail && !detailClosing && "md:hidden")}>
           <Stories onToast={showToast} />
-          <CategoryTabs active={activeCategory} onChange={setActiveCategory} />
-          <ComposerCard onOpen={() => setComposerOpen(true)} />
+          <CategoryTabs active={activeCategory} onChange={setActiveCategory} composerRef={composerRef} onCreatePost={() => setComposerOpen(true)} />
+          <ComposerCard onOpen={() => setComposerOpen(true)} containerRef={composerRef} />
 
-          <div className="mt-3 flex items-center justify-between px-4 md:mt-3 md:px-1">
-            <div>
+          <div className="mt-3 flex items-center justify-between gap-3 px-4 md:mt-3 md:px-1">
+            <div className="min-w-0">
               <p className="text-sm font-bold text-slate-900">Feed terbaru</p>
               <p className="mt-0.5 text-xs text-slate-500">Pilihan terbaik dari komunitasmu</p>
             </div>
-            <button className="focus-ring flex items-center gap-1 rounded-full px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-white">
-              Paling relevan <ChevronDown className="h-3.5 w-3.5" />
-            </button>
+            <div className="relative max-w-[50%] shrink-0 text-slate-600">
+              <select
+                aria-label="Filter postingan berdasarkan kota"
+                value={selectedCity}
+                onChange={(event) => setSelectedCity(event.target.value)}
+                className="peer absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0"
+              >
+                <option value="">Semua</option>
+                {cities.map((city) => <option key={city.value} value={city.value}>{city.label}</option>)}
+              </select>
+              <span aria-hidden="true" className="pointer-events-none flex items-center gap-1.5 rounded-full px-3 py-2 text-xs font-semibold peer-hover:bg-white peer-focus-visible:ring-2 peer-focus-visible:ring-brand-500 peer-focus-visible:ring-offset-2">
+                <MapPin className="h-3.5 w-3.5 shrink-0" />
+                <span className="min-w-0 truncate">{cities.find((city) => city.value === selectedCity)?.label ?? "Semua"}</span>
+                <ChevronDown className="h-3.5 w-3.5 shrink-0" />
+              </span>
+            </div>
           </div>
 
           <div className="mt-2.5 space-y-3">
@@ -333,7 +388,7 @@ export function ChatiersApp() {
                 onShare={() => showToast("Tautan postingan disalin")}
               />
             ))}
-            {filteredPosts.length === 0 && <EmptyFeed onReset={() => { setActiveCategory("all"); setSearchQuery(""); }} />}
+            {filteredPosts.length === 0 && <EmptyFeed onReset={() => { setActiveCategory("all"); setSelectedCity(""); setSearchQuery(""); }} />}
           </div>
           </div>
 
@@ -424,30 +479,103 @@ function LeftSidebar() {
   );
 }
 
-function CategoryTabs({ active, onChange }: { active: string; onChange: (value: string) => void }) {
+function CategoryTabs({ active, onChange, composerRef, onCreatePost }: { active: "all" | PostCategory; onChange: (value: "all" | PostCategory) => void; composerRef: React.RefObject<HTMLDivElement | null>; onCreatePost: () => void }) {
+  const barRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [edges, setEdges] = useState({ left: false, right: false });
+  const [showCreate, setShowCreate] = useState(false);
+
+  useEffect(() => {
+    const bar = barRef.current;
+    const composer = composerRef.current;
+    if (!bar || !composer) return;
+    let observer: IntersectionObserver | null = null;
+    const observeComposer = () => {
+      observer?.disconnect();
+      const coveredTop = (Number.parseFloat(window.getComputedStyle(bar).top) || 0) + bar.offsetHeight;
+      observer = new IntersectionObserver(([entry]) => {
+        setShowCreate(!entry.isIntersecting && entry.boundingClientRect.bottom <= (entry.rootBounds?.top ?? coveredTop));
+      }, { rootMargin: `-${coveredTop}px 0px 0px 0px` });
+      observer.observe(composer);
+    };
+    const resizeObserver = new ResizeObserver(observeComposer);
+    resizeObserver.observe(bar);
+    observeComposer();
+    return () => {
+      observer?.disconnect();
+      resizeObserver.disconnect();
+    };
+  }, [composerRef]);
+
+  useEffect(() => {
+    const element = scrollRef.current;
+    if (!element) return;
+    function updateEdges() {
+      if (!element) return;
+      const left = element.scrollLeft > 2;
+      const right = element.scrollWidth - element.clientWidth - element.scrollLeft > 2;
+      setEdges((current) => current.left === left && current.right === right ? current : { left, right });
+    }
+    const observer = new ResizeObserver(updateEdges);
+    observer.observe(element);
+    element.addEventListener("scroll", updateEdges, { passive: true });
+    updateEdges();
+    return () => {
+      observer.disconnect();
+      element.removeEventListener("scroll", updateEdges);
+    };
+  }, []);
+
+  useEffect(() => {
+    const element = scrollRef.current;
+    const selected = element?.querySelector<HTMLButtonElement>('[aria-pressed="true"]');
+    if (!element || !selected) return;
+    const bounds = element.getBoundingClientRect();
+    const button = selected.getBoundingClientRect();
+    const inset = window.matchMedia("(min-width: 768px)").matches ? 44 : 16;
+    const offset = button.left < bounds.left + inset ? button.left - bounds.left - inset : button.right > bounds.right - inset ? button.right - bounds.right + inset : 0;
+    if (offset) element.scrollBy({ left: offset, behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+  }, [active, showCreate]);
+
+  function scrollFilters(direction: number) {
+    const element = scrollRef.current;
+    if (!element) return;
+    element.scrollBy({ left: direction * element.clientWidth * 0.7, behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+  }
+
   return (
-    <div className="sticky top-16 z-20 border-b border-slate-100 bg-white/95 px-3 py-2 backdrop-blur-md md:mt-2 md:rounded-2xl md:border md:border-slate-200/80 md:px-2.5 md:shadow-card">
-      <div className="flex w-full items-center justify-between gap-0.5">
+    <div ref={barRef} className="sticky top-16 z-20 flex items-center border-b border-slate-100 bg-white/95 py-2 backdrop-blur-md md:mt-2 md:rounded-2xl md:border md:border-slate-200/80 md:shadow-card">
+      {showCreate && <div className="shrink-0 pl-4 pr-2"><button type="button" onClick={onCreatePost} aria-label="Buat postingan" title="Buat postingan" className="focus-ring flex h-10 w-10 animate-fade-in items-center justify-center rounded-full bg-brand-600 text-white transition-colors hover:bg-brand-700 motion-reduce:animate-none"><Plus aria-hidden="true" className="h-5 w-5" /></button></div>}
+      <div className="relative min-w-0 flex-1">
+      <div ref={scrollRef} role="group" aria-label="Filter jenis postingan" className={clsx("flex w-full snap-x snap-proximity scroll-pr-4 items-center gap-2 overflow-x-auto overscroll-x-contain pr-4 py-1 [scrollbar-width:none] md:scroll-px-12 md:gap-2.5 [&::-webkit-scrollbar]:hidden", showCreate ? "scroll-pl-1 pl-1" : "scroll-pl-4 pl-4")}>
         {categories.map((category) => (
           <button
+            type="button"
             key={category.id}
             onClick={() => onChange(category.id)}
+            aria-pressed={active === category.id}
             className={clsx(
-              "focus-ring shrink-0 rounded-xl px-1.5 py-2 text-[10px] font-bold transition sm:px-3 sm:text-xs",
-              active === category.id ? categoryStyles[category.id].active : categoryStyles[category.id].inactive
+              "focus-ring flex h-10 shrink-0 snap-start items-center justify-center whitespace-nowrap rounded-full px-4 text-xs font-bold transition",
+              active === category.id ? getCategoryStyles(category.id).active : getCategoryStyles(category.id).inactive
             )}
           >
             {category.label}
           </button>
         ))}
       </div>
+
+      <div aria-hidden="true" className={clsx("pointer-events-none absolute inset-y-1 left-0 w-8 bg-gradient-to-r from-white to-transparent transition-opacity md:w-12 md:rounded-l-2xl", edges.left ? "opacity-100" : "opacity-0")} />
+      <div aria-hidden="true" className={clsx("pointer-events-none absolute inset-y-1 right-0 w-8 bg-gradient-to-l from-white to-transparent transition-opacity md:w-12 md:rounded-r-2xl", edges.right ? "opacity-100" : "opacity-0")} />
+      <button type="button" aria-label="Filter sebelumnya" disabled={!edges.left} onClick={() => scrollFilters(-1)} className="focus-ring absolute left-1.5 top-1/2 z-10 hidden h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50 disabled:pointer-events-none disabled:opacity-0 md:flex"><ChevronLeft className="h-4 w-4" /></button>
+      <button type="button" aria-label="Filter berikutnya" disabled={!edges.right} onClick={() => scrollFilters(1)} className="focus-ring absolute right-1.5 top-1/2 z-10 hidden h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50 disabled:pointer-events-none disabled:opacity-0 md:flex"><ChevronRight className="h-4 w-4" /></button>
+      </div>
     </div>
   );
 }
 
-function ComposerCard({ onOpen }: { onOpen: () => void }) {
+function ComposerCard({ onOpen, containerRef }: { onOpen: () => void; containerRef: React.Ref<HTMLDivElement> }) {
   return (
-    <div className="mt-2 border-y border-slate-100 bg-white p-4 md:rounded-2xl md:border md:border-slate-200/80 md:shadow-card">
+    <div ref={containerRef} className="mt-2 border-y border-slate-100 bg-white p-4 md:rounded-2xl md:border md:border-slate-200/80 md:shadow-card">
       <div className="flex gap-3">
         <Avatar src={currentUser.avatar} alt={currentUser.name} size="lg" />
         <button onClick={onOpen} className="focus-ring flex-1 rounded-2xl bg-slate-100 px-4 text-left text-sm text-slate-500 transition hover:bg-slate-50 hover:ring-1 hover:ring-slate-200">
@@ -497,7 +625,7 @@ function PostContent({ post, authorRef }: { post: Post; authorRef?: React.Ref<HT
           </div>
           <p className="truncate text-[11px] text-slate-400">{post.role}</p>
         </div>
-        <span className={clsx("rounded-full px-2.5 py-1 text-[10px] font-bold ring-1", categoryStyles[post.category].badge)}>{getPostCategoryLabel(post.category)}</span>
+        <span className={clsx("rounded-full px-2.5 py-1 text-[10px] font-bold ring-1", getCategoryStyles(post.category).badge)}>{getPostCategoryLabel(post.category)}</span>
         <button className="icon-button -mr-2 -mt-2 h-9 w-9" aria-label="Opsi lainnya"><MoreHorizontal className="h-5 w-5" /></button>
       </div>
 
@@ -851,6 +979,24 @@ function PostDetailsPanel({ details }: { details: PostDetails }) {
     );
   }
 
+  if (details.type === "service" || details.type === "rental") {
+    const isService = details.type === "service";
+    const priceLabel = details.pricingType === "fixed"
+      ? `${formatRupiah(details.price)} / ${isService ? details.priceUnit : details.rentalPeriod}`
+      : ({ negotiable: "Tarif nego", free: "Gratis", contact: "Hubungi penyedia" } as const)[details.pricingType];
+    const chips = details.type === "service"
+      ? [details.serviceMode, details.turnaround && `Pengerjaan ${details.turnaround}`, details.status === "available" ? "Menerima pesanan" : "Jadwal penuh"]
+      : [details.minimumDuration && `Minimal ${details.minimumDuration} ${details.rentalPeriod}`, details.deposit !== undefined && (details.deposit === 0 ? "Tanpa deposit" : `Deposit ${formatRupiah(details.deposit)}`), details.handover, details.status === "available" ? "Tersedia" : "Sedang disewa"];
+    return (
+      <div className={clsx("mt-3 rounded-2xl border p-3.5", isService ? "border-amber-100 bg-amber-50/60" : "border-indigo-100 bg-indigo-50/60")}>
+        <p className={clsx("text-[10px] font-bold uppercase tracking-wider", isService ? "text-amber-600" : "text-indigo-600")}>{isService ? "Penawaran jasa" : "Disewakan"}</p>
+        <h4 className="mt-1 break-words text-sm font-extrabold text-slate-900">{details.title}</h4>
+        <p className={clsx("mt-1.5 text-sm font-bold", isService ? "text-amber-700" : "text-indigo-700")}>{priceLabel}</p>
+        <div className="mt-2 flex flex-wrap gap-1.5">{chips.filter(Boolean).map((item) => <DetailChip key={String(item)}>{item}</DetailChip>)}</div>
+      </div>
+    );
+  }
+
   if (details.type === "vacancy") {
     const salary = details.salaryMin || details.salaryMax ? `${details.salaryMin ? formatRupiah(details.salaryMin) : ""}${details.salaryMin && details.salaryMax ? " – " : ""}${details.salaryMax ? formatRupiah(details.salaryMax) : "+"}` : undefined;
     return (
@@ -889,7 +1035,7 @@ function EmptyFeed({ onReset }: { onReset: () => void }) {
     <div className="mx-4 rounded-2xl border border-dashed border-slate-300 bg-white p-12 text-center md:mx-0">
       <Sparkles className="mx-auto h-8 w-8 text-brand-500" />
       <h3 className="mt-3 font-bold">Belum ada postingan di sini</h3>
-      <p className="mt-1 text-sm text-slate-500">Coba kategori lain untuk menemukan inspirasi.</p>
+      <p className="mt-1 text-sm text-slate-500">Coba kota, kategori, atau kata pencarian lain.</p>
       <button onClick={onReset} className="mt-4 rounded-full bg-ink px-4 py-2 text-xs font-bold text-white">Kembali ke feed</button>
     </div>
   );
@@ -959,6 +1105,12 @@ type ComposerFormState = {
   condition: string;
   itemCategory: string;
   delivery: string;
+  priceUnit: ServicePriceUnit;
+  serviceMode: string;
+  turnaround: string;
+  rentalPeriod: RentalPeriod;
+  minimumDuration: string;
+  deposit: string;
   budgetMin: string;
   budgetMax: string;
   desiredCondition: string;
@@ -984,6 +1136,7 @@ type ComposerFormState = {
 
 const initialComposerForm: ComposerFormState = {
   text: "", category: "thread", topic: "", title: "", pricingType: "fixed", price: "", condition: "Bekas seperti baru", itemCategory: "", delivery: "",
+  priceUnit: "proyek", serviceMode: "Online", turnaround: "", rentalPeriod: "hari", minimumDuration: "1", deposit: "",
   budgetMin: "", budgetMax: "", desiredCondition: "", buyDeadline: "", position: "", company: "", employmentType: "Penuh waktu", workMode: "Hybrid",
   salaryMin: "", salaryMax: "", vacancySkills: "", applicationUrl: "", vacancyDeadline: "", targetRole: "", jobSkills: "", experienceLevel: "",
   workPreference: "Fleksibel", availability: "Segera", portfolioUrl: "", expectedSalary: "", location: "",
@@ -1027,6 +1180,18 @@ function ComposerModal({ open, onClose, onSubmit }: { open: boolean; onClose: ()
       const budgetMax = numberValue(form.budgetMax);
       if (budgetMin && budgetMax && budgetMin > budgetMax) { setFormError("Anggaran minimum tidak boleh melebihi anggaran maksimum."); return null; }
       return { type: "buy", title: form.title.trim(), budgetMin, budgetMax, desiredCondition: form.desiredCondition.trim() || undefined, deadline: form.buyDeadline || undefined, status: "looking" };
+    }
+    if (form.category === "service" || form.category === "rental") {
+      if (!form.title.trim()) { setFormError(form.category === "service" ? "Nama jasa wajib diisi." : "Nama barang atau ruang yang disewakan wajib diisi."); return null; }
+      const price = numberValue(form.price);
+      if (form.pricingType === "fixed" && (price === undefined || !Number.isSafeInteger(price) || price <= 0)) { setFormError("Masukkan tarif berupa angka rupiah yang lebih besar dari nol."); return null; }
+      const pricing = { title: form.title.trim(), pricingType: form.pricingType, price: form.pricingType === "fixed" ? price : undefined };
+      if (form.category === "service") return { type: "service", ...pricing, priceUnit: form.priceUnit, serviceMode: form.serviceMode, turnaround: form.turnaround.trim() || undefined, status: "available" };
+      const minimumDuration = numberValue(form.minimumDuration);
+      const deposit = numberValue(form.deposit);
+      if (form.minimumDuration.trim() && (minimumDuration === undefined || !Number.isSafeInteger(minimumDuration) || minimumDuration < 1)) { setFormError("Minimum sewa harus berupa bilangan bulat minimal 1."); return null; }
+      if (form.deposit.trim() && (deposit === undefined || !Number.isSafeInteger(deposit) || deposit < 0)) { setFormError("Deposit harus berupa angka rupiah nol atau lebih."); return null; }
+      return { type: "rental", ...pricing, rentalPeriod: form.rentalPeriod, minimumDuration, deposit, handover: form.delivery.trim() || undefined, status: "available" };
     }
     if (form.category === "vacancy") {
       if (!form.position.trim() || !form.company.trim()) { setFormError("Posisi dan nama perusahaan wajib diisi."); return null; }
@@ -1170,6 +1335,28 @@ function CategoryFields({ form, update }: { form: ComposerFormState; update: <K 
       <ComposerField label="Dicari sebelum" value={form.buyDeadline} onChange={(value) => update("buyDeadline", value)} type="date" />
     </div>
   );
+
+  if (form.category === "service" || form.category === "rental") {
+    const isService = form.category === "service";
+    return (
+      <div className={clsx("mt-3 grid gap-3 rounded-2xl p-3.5 sm:grid-cols-2", isService ? "bg-amber-50/70" : "bg-indigo-50/70")}>
+        <div className="sm:col-span-2"><ComposerField label={isService ? "Nama jasa *" : "Barang / ruang yang disewakan *"} value={form.title} onChange={(value) => update("title", value)} placeholder={isService ? "Contoh: Desain identitas brand" : "Contoh: Sony A6400 + lensa kit"} /></div>
+        <ComposerSelect label="Skema tarif *" value={form.pricingType} onChange={(value) => update("pricingType", value as PricingType)} options={[["fixed", "Tarif tetap"], ["negotiable", "Bisa dinego"], ["free", "Gratis"], ["contact", "Hubungi penyedia"]]} />
+        {isService
+          ? <ComposerSelect label="Satuan tarif" value={form.priceUnit} onChange={(value) => update("priceUnit", value as ServicePriceUnit)} options={servicePriceUnits.map((unit) => [unit, `Per ${unit}`] as const)} />
+          : <ComposerSelect label="Durasi tarif sewa" value={form.rentalPeriod} onChange={(value) => update("rentalPeriod", value as RentalPeriod)} options={rentalPeriods.map((period) => [period, `Per ${period}`] as const)} />}
+        {form.pricingType === "fixed" && <ComposerField label="Tarif (Rp) *" value={form.price} onChange={(value) => update("price", value)} placeholder={isService ? "1500000" : "175000"} type="number" />}
+        {isService ? <>
+          <ComposerSelect label="Cara pengerjaan" value={form.serviceMode} onChange={(value) => update("serviceMode", value)} options={[["Online", "Online"], ["Di lokasi", "Di lokasi"], ["Online & di lokasi", "Online & di lokasi"]]} />
+          <ComposerField label="Estimasi pengerjaan" value={form.turnaround} onChange={(value) => update("turnaround", value)} placeholder="Contoh: 5–7 hari kerja" />
+        </> : <>
+          <ComposerField label={`Minimum sewa (${form.rentalPeriod})`} value={form.minimumDuration} onChange={(value) => update("minimumDuration", value)} placeholder="1" type="number" />
+          <ComposerField label="Deposit (Rp)" value={form.deposit} onChange={(value) => update("deposit", value)} placeholder="Opsional, isi 0 jika tanpa deposit" type="number" />
+          <ComposerField label="Serah terima" value={form.delivery} onChange={(value) => update("delivery", value)} placeholder="Ambil di tempat, diantar, atau di lokasi" />
+        </>}
+      </div>
+    );
+  }
 
   if (form.category === "vacancy") return (
     <div className="mt-3 grid gap-3 rounded-2xl bg-cyan-50/70 p-3.5 sm:grid-cols-2">

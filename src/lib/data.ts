@@ -1,4 +1,4 @@
-import { BadgeDollarSign, BriefcaseBusiness, CircleDollarSign, Lightbulb, MessagesSquare, Search, ShoppingBag, UserSearch } from "lucide-react";
+import { BadgeDollarSign, BriefcaseBusiness, CircleDollarSign, Handshake, KeyRound, Lightbulb, MessagesSquare, Search, ShoppingBag, UserSearch } from "lucide-react";
 
 export const currentUser = {
   username: "aryapratama",
@@ -104,6 +104,8 @@ export const postCategories = [
   { id: "thread", label: "Utas", icon: MessagesSquare },
   { id: "sell", label: "Jual", icon: BadgeDollarSign },
   { id: "buy", label: "Beli", icon: CircleDollarSign },
+  { id: "service", label: "Jasa", icon: Handshake },
+  { id: "rental", label: "Rental", icon: KeyRound },
   { id: "vacancy", label: "Lowongan", icon: BriefcaseBusiness },
   { id: "job-search", label: "Cari Kerja", icon: UserSearch },
 ] as const;
@@ -116,6 +118,11 @@ export const categories = [
 export type PostCategory = (typeof postCategories)[number]["id"];
 
 export type PricingType = "fixed" | "negotiable" | "free" | "contact";
+
+export const servicePriceUnits = ["proyek", "jam", "sesi", "bulan"] as const;
+export const rentalPeriods = ["jam", "hari", "minggu", "bulan"] as const;
+export type ServicePriceUnit = (typeof servicePriceUnits)[number];
+export type RentalPeriod = (typeof rentalPeriods)[number];
 
 export type PostImage = {
   id: string;
@@ -175,6 +182,27 @@ export type PostDetails =
       status: "looking" | "found" | "closed";
     }
   | {
+      type: "service";
+      title: string;
+      pricingType: PricingType;
+      price?: number;
+      priceUnit: ServicePriceUnit;
+      serviceMode: string;
+      turnaround?: string;
+      status: "available" | "full";
+    }
+  | {
+      type: "rental";
+      title: string;
+      pricingType: PricingType;
+      price?: number;
+      rentalPeriod: RentalPeriod;
+      minimumDuration?: number;
+      deposit?: number;
+      handover?: string;
+      status: "available" | "rented";
+    }
+  | {
       type: "vacancy";
       position: string;
       company: string;
@@ -221,7 +249,60 @@ export type Post = {
   saved?: boolean;
 };
 
+export function getPostTitle(post: Post) {
+  const details = post.details;
+  switch (details.type) {
+    case "thread": return details.topic ?? "Utas komunitas";
+    case "sell":
+    case "buy":
+    case "service":
+    case "rental": return details.title;
+    case "vacancy": return details.position;
+    case "job-search": return details.targetRole;
+  }
+}
+
 export const posts: Post[] = [
+  {
+    id: 13,
+    author: currentUser.name,
+    role: "Product Designer",
+    avatar: currentUser.avatar,
+    time: "3 menit",
+    category: "thread",
+    text: "Sedikit dokumentasi sesi kolaborasi hari ini. Mulai dari diskusi bareng tim sampai merapikan ide di meja kerja. Dua suasana yang berbeda, tetapi sama-sama membantu menemukan sudut pandang baru ✨",
+    images: [
+      { id: "13-team", name: "Sesi diskusi tim dengan laptop di meja bersama", url: "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=900&q=85" },
+      { id: "13-workspace", name: "Meja kerja dengan catatan dan perlengkapan untuk menyusun ide", url: "https://images.unsplash.com/photo-1499750310107-5fef28a66643?auto=format&fit=crop&w=900&q=85" },
+    ],
+    location: "Jakarta, Indonesia",
+    details: { type: "thread", topic: "Di Balik Layar" },
+    likes: 18,
+    comments: 0,
+    commentItems: [],
+    shares: 2,
+  },
+  {
+    id: 14,
+    author: "Ruang Temu",
+    role: "Ruang Meeting & Workshop",
+    avatar: "https://i.pravatar.cc/160?img=56",
+    time: "7 menit",
+    category: "rental",
+    text: "Sedang mencari tempat untuk kerja bareng atau workshop kecil? Kenalan dulu dengan suasana Ruang Temu lewat empat foto ini. Ada area kerja bersama, sudut diskusi, dan ruang untuk presentasi. Wi-Fi, papan tulis, dan air mineral sudah termasuk; silakan cek jadwal sebelum reservasi.",
+    images: [
+      { id: "14-open-space", name: "Area kerja bersama dengan meja panjang dan cahaya alami", url: "https://images.unsplash.com/photo-1497366811353-6870744d04b2?auto=format&fit=crop&w=900&q=85" },
+      { id: "14-interior", name: "Interior ruang kerja dengan meja dan tempat duduk", url: "https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=900&q=85" },
+      { id: "14-collaboration", name: "Area untuk diskusi dan bekerja bersama", url: "https://images.unsplash.com/photo-1524758631624-e2822e304c36?auto=format&fit=crop&w=900&q=85" },
+      { id: "14-workshop", name: "Suasana ruang kolaborasi dan kegiatan tim", url: "https://images.unsplash.com/photo-1504384308090-c894fdcc538d?auto=format&fit=crop&w=900&q=85" },
+    ],
+    location: "Bandung, Jawa Barat",
+    details: { type: "rental", title: "Ruang Kolaborasi & Workshop", pricingType: "fixed", price: 200000, rentalPeriod: "jam", minimumDuration: 2, deposit: 0, handover: "Digunakan di lokasi", status: "available" },
+    likes: 24,
+    comments: 0,
+    commentItems: [],
+    shares: 4,
+  },
   {
     id: 1,
     author: "Rian Ardiansyah",
@@ -256,6 +337,38 @@ export const posts: Post[] = [
     ],
     shares: 8,
     liked: true,
+  },
+  {
+    id: 9,
+    author: "Nadia Putri",
+    role: "Product Designer · Creator",
+    avatar: "https://i.pravatar.cc/160?img=47",
+    time: "25 menit",
+    category: "service",
+    text: "Buka slot desain identitas brand untuk UMKM yang ingin tampil lebih rapi. Paket mencakup logo, palet warna, tipografi, dan panduan penggunaan singkat. Termasuk dua kali revisi dan sesi diskusi online sebelum mulai.",
+    image: "https://images.unsplash.com/photo-1561070791-2526d30994b5?auto=format&fit=crop&w=1200&q=85",
+    location: "Bandung · Melayani seluruh Indonesia",
+    details: { type: "service", title: "Desain Identitas Brand UMKM", pricingType: "fixed", price: 1500000, priceUnit: "proyek", serviceMode: "Online", turnaround: "5–7 hari kerja", status: "available" },
+    likes: 46,
+    comments: 3,
+    commentItems: [{ id: "9-1", author: currentUser.name, avatar: currentUser.avatar, text: "Apakah file logo versi cetak juga termasuk dalam paket?", time: "18 menit", replies: [{ id: "9-1-1", author: "Nadia Putri", avatar: "https://i.pravatar.cc/160?img=47", text: "Termasuk, Arya. Nanti dapat file vektor, PNG transparan, dan versi untuk cetak.", time: "15 menit", replyToAuthor: currentUser.name }] }],
+    shares: 7,
+  },
+  {
+    id: 11,
+    author: "Lensa Kita",
+    role: "Rental Kamera & Peralatan Kreatif",
+    avatar: "https://i.pravatar.cc/160?img=60",
+    time: "35 menit",
+    category: "rental",
+    text: "Butuh kamera untuk liburan atau produksi konten? Paket kamera Canon dengan lensa zoom siap disewa. Sudah termasuk dua baterai, kartu memori 64 GB, dan tas kamera. Cek jadwal ketersediaan sebelum mengambil unit, ya.",
+    image: "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=1200&q=85",
+    location: "Jakarta Selatan",
+    details: { type: "rental", title: "Kamera Canon + Lensa Zoom", pricingType: "fixed", price: 175000, rentalPeriod: "hari", minimumDuration: 1, deposit: 500000, handover: "Ambil di studio atau antar area Jakarta", status: "available" },
+    likes: 32,
+    comments: 2,
+    commentItems: [{ id: "11-1", author: "Rian Ardiansyah", avatar: "https://i.pravatar.cc/160?img=11", text: "Kalau sewa tiga hari, bisa sekalian tambah tripod?", time: "20 menit", replies: [{ id: "11-1-1", author: "Lensa Kita", avatar: "https://i.pravatar.cc/160?img=60", text: "Bisa, Kak. Tripod tersedia sebagai tambahan, tinggal sebutkan saat cek jadwal.", time: "16 menit", replyToAuthor: "Rian Ardiansyah" }] }],
+    shares: 5,
   },
   {
     id: 2,
@@ -387,6 +500,37 @@ export const posts: Post[] = [
     likes: 58,
     comments: 9,
     shares: 3,
+  },
+  {
+    id: 10,
+    author: "Siti Rahma",
+    role: "Software Engineer · Freelance Web Developer",
+    avatar: "https://i.pravatar.cc/160?img=32",
+    time: "6 jam",
+    category: "service",
+    text: "Menerima pembuatan landing page untuk usaha, acara, atau peluncuran produk. Desain responsif, formulir kontak, integrasi WhatsApp, dan bantuan publikasi sudah termasuk. Harga disesuaikan dengan jumlah halaman dan kebutuhan fitur; boleh diskusi brief dulu.",
+    location: "Jakarta Barat · Remote",
+    details: { type: "service", title: "Pembuatan Landing Page Bisnis", pricingType: "contact", priceUnit: "proyek", serviceMode: "Online", turnaround: "7–10 hari kerja", status: "available" },
+    likes: 64,
+    comments: 0,
+    commentItems: [],
+    shares: 12,
+  },
+  {
+    id: 12,
+    author: "Ruang Temu",
+    role: "Ruang Meeting & Workshop",
+    avatar: "https://i.pravatar.cc/160?img=56",
+    time: "8 jam",
+    category: "rental",
+    text: "Ruang meeting untuk maksimal delapan orang, cocok untuk diskusi tim, presentasi, atau workshop kecil. Sudah termasuk Wi-Fi, layar presentasi, papan tulis, dan air mineral. Minimal dua jam; konfirmasi jadwal terlebih dahulu sebelum reservasi.",
+    image: "https://images.unsplash.com/photo-1497366811353-6870744d04b2?auto=format&fit=crop&w=1200&q=85",
+    location: "Bandung, Jawa Barat",
+    details: { type: "rental", title: "Ruang Meeting Kapasitas 8 Orang", pricingType: "fixed", price: 125000, rentalPeriod: "jam", minimumDuration: 2, deposit: 0, handover: "Digunakan di lokasi", status: "available" },
+    likes: 27,
+    comments: 0,
+    commentItems: [],
+    shares: 6,
   },
   {
     id: 8,

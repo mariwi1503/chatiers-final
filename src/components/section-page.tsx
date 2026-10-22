@@ -10,7 +10,7 @@ import { useState } from "react";
 import { Avatar } from "@/components/avatar";
 import { AppHeader } from "@/components/app-header";
 import { MobileBottomNav } from "@/components/mobile-bottom-nav";
-import { posts as initialPosts, type Post } from "@/lib/data";
+import { getPostTitle, posts as initialPosts, type Post } from "@/lib/data";
 
 export type SectionKind = "communities" | "saved";
 
@@ -25,7 +25,7 @@ export function SectionPage({ section }: { section: SectionKind }) {
   const [query, setQuery] = useState("");
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-20 md:pb-8">
+    <div className="min-h-screen bg-slate-50 pb-[calc(56px+env(safe-area-inset-bottom))] md:pb-8">
       <AppHeader
         active={section}
         searchQuery={query}
@@ -76,13 +76,6 @@ function SavedSection({ query }: { query: string }) {
       {filtered.length === 0 && <EmptySearch text={savedPosts.length === 0 ? "Belum ada postingan tersimpan." : "Postingan tidak ditemukan."} />}
     </section>
   );
-}
-
-function getPostTitle(post: Post) {
-  if (post.details.type === "sell" || post.details.type === "buy") return post.details.title;
-  if (post.details.type === "vacancy") return post.details.position;
-  if (post.details.type === "job-search") return post.details.targetRole;
-  return post.details.topic ?? "Utas komunitas";
 }
 
 function EmptySearch({ text }: { text: string }) {
