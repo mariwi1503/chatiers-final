@@ -593,8 +593,10 @@ export const quickActions = [
 
 export type ChatMessageStatus = "sent" | "delivered" | "read";
 
+export type ChatPostContext = { id: number; author: string; title: string; image?: string };
+
 export type ChatMessageContent =
-  | { kind: "text"; text: string }
+  | { kind: "text"; text: string; postContext?: ChatPostContext; simulated?: boolean }
   | { kind: "image"; url: string; caption?: string }
   | { kind: "voice"; duration: number }
   | { kind: "file"; name: string; size: number };

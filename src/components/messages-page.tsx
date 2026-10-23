@@ -27,11 +27,14 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import clsx from "clsx";
+import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { useSocial } from "@/components/social-provider";
+import { useStorefront } from "@/components/storefront-provider";
 import { AppHeader } from "@/components/app-header";
 import { Avatar } from "@/components/avatar";
 import { MobileBottomNav } from "@/components/mobile-bottom-nav";
-import { conversations as initialConversations, type ChatMessage, type ChatMessageContent, type Conversation } from "@/lib/data";
+import { conversations as initialConversations, getPostTitle, type ChatPostContext, type ChatMessage, type ChatMessageContent, type Conversation } from "@/lib/data";
 
 type ChatFilter = "all" | "unread" | "groups";
 
@@ -73,11 +76,57 @@ export function MessagesPage() {
   const [filter, setFilter] = useState<ChatFilter>("all");
   const [query, setQuery] = useState("");
   const [muted, setMuted] = useState<string[]>([]);
-  const [blocked, setBlocked] = useState<string[]>([]);
+  const { blocked, toggleBlock } = useSocial();
+  const { posts } = useStorefront();
+  const openedRecipient = useRef<string | null>(null);
+  const [draftContexts, setDraftContexts] = useState<Record<string, ChatPostContext>>({});
+  const [pendingReplies, setPendingReplies] = useState<{ conversationId: string; messageId: string; context: ChatPostContext }[]>([]);
   const [newChatOpen, setNewChatOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
+  useEffect(() => {
+    const params = new URL(window.location.href).searchParams;
+    const recipient = params.get("to");
+    const postId = Number(params.get("post"));
+    if (!recipient || openedRecipient.current === recipient) return;
+    const existing = initialConversations.find((item) => !item.isGroup && item.name === recipient);
+    const author = posts.find((post) => post.author === recipient);
+    if (!existing && !author) return;
+    openedRecipient.current = recipient;
+    const conversation: Conversation = existing ?? {
+      id: `direct-${encodeURIComponent(recipient)}`, name: recipient, avatar: author!.avatar,
+      role: author!.role, unread: 0, time: "", messages: [],
+    };
+    setConversations((items) => items.some((item) => item.id === conversation.id)
+      ? items.map((item) => item.id === conversation.id ? { ...item, unread: 0 } : item)
+      : [{ ...conversation, unread: 0 }, ...items]);
+    const post = posts.find((item) => item.id === postId && item.author === recipient);
+    if (post) setDraftContexts((current) => ({ ...current, [conversation.id]: {
+      id: post.id, author: post.author, title: getPostTitle(post), image: post.images?.[0]?.url ?? post.image,
+    } }));
+    setSelectedId(conversation.id);
+    setMobileOpen(true);
+  }, [posts]);
+
   const selected = conversations.find((item) => item.id === selectedId) ?? conversations[0];
+  useEffect(() => {
+    if (!pendingReplies.length) return;
+    const timer = window.setTimeout(() => {
+      setConversations((items) => items.map((item) => {
+        const pending = pendingReplies.filter((reply) => reply.conversationId === item.id && item.messages.some((message) => message.id === reply.messageId));
+        if (!pending.length || blocked.includes(item.name)) return item;
+        const replies: ChatMessage[] = pending.map((reply) => ({
+          id: `reply-${reply.messageId}`, from: "them", kind: "text", time: nowLabel(), simulated: true,
+          text: `Hai! Terima kasih sudah menghubungi saya tentang “${reply.context.title}”. Boleh, kamu ingin tahu detail yang mana?`,
+        }));
+        return { ...item, time: nowLabel(), unread: item.id === selectedId ? 0 : item.unread + replies.length,
+          messages: [...item.messages.map((message) => pending.some((reply) => reply.messageId === message.id) ? { ...message, status: "read" as const } : message), ...replies] };
+      }));
+      setPendingReplies([]);
+    }, 1800);
+    return () => window.clearTimeout(timer);
+  }, [pendingReplies, blocked, selectedId]);
+
   const unreadTotal = conversations.reduce((total, item) => total + item.unread, 0);
 
   const filtered = useMemo(() => {
@@ -102,9 +151,15 @@ export function MessagesPage() {
   }
 
   function sendMessage(content: ChatMessageContent) {
-    const id = `msg-${Date.now()}`;
-    const message = { ...content, id, from: "me", time: nowLabel(), status: "sent" } as ChatMessage;
+    if (!selected.isGroup && blocked.includes(selected.name)) return;
+    const id = `msg-${crypto.randomUUID()}`;
+    const context = content.kind === "text" ? draftContexts[selected.id] : undefined;
+    const message = { ...content, ...(context ? { postContext: context } : {}), id, from: "me", time: nowLabel(), status: "sent" } as ChatMessage;
     const target = selected;
+    if (context) {
+      setDraftContexts((current) => { const next = { ...current }; delete next[target.id]; return next; });
+      setPendingReplies((current) => [...current, { conversationId: target.id, messageId: id, context }]);
+    }
 
     setConversations((items) => {
       const current = items.find((item) => item.id === target.id);
@@ -132,8 +187,8 @@ export function MessagesPage() {
   }
 
   function toggleBlocked() {
-    const isBlocked = blocked.includes(selected.id);
-    setBlocked((items) => (isBlocked ? items.filter((id) => id !== selected.id) : [...items, selected.id]));
+    const isBlocked = blocked.includes(selected.name);
+    toggleBlock(selected.name);
     showToast(isBlocked ? `${firstName(selected.name)} dibuka blokirnya` : `${firstName(selected.name)} diblokir`);
   }
 
@@ -160,8 +215,11 @@ export function MessagesPage() {
             <ConversationView
               key={selected.id}
               conversation={selected}
+              postContext={draftContexts[selected.id]}
+              replying={pendingReplies.some((reply) => reply.conversationId === selected.id)}
+              onRemoveContext={() => setDraftContexts((current) => { const next = { ...current }; delete next[selected.id]; return next; })}
               muted={muted.includes(selected.id)}
-              blocked={blocked.includes(selected.id)}
+              blocked={!selected.isGroup && blocked.includes(selected.name)}
               onBack={() => setMobileOpen(false)}
               onSend={sendMessage}
               onClear={clearConversation}
@@ -286,8 +344,11 @@ function ConversationList({ conversations, selectedId, unreadTotal, filter, onFi
   );
 }
 
-function ConversationView({ conversation, muted, blocked, onBack, onSend, onClear, onToggleMuted, onToggleBlocked, onToast }: {
+function ConversationView({ conversation, postContext, replying, onRemoveContext, muted, blocked, onBack, onSend, onClear, onToggleMuted, onToggleBlocked, onToast }: {
   conversation: Conversation;
+  postContext?: ChatPostContext;
+  replying: boolean;
+  onRemoveContext: () => void;
   muted: boolean;
   blocked: boolean;
   onBack: () => void;
@@ -374,18 +435,32 @@ function ConversationView({ conversation, muted, blocked, onBack, onSend, onClea
         )}
       </div>
 
+      {replying && !blocked && <p role="status" className="bg-slate-50 px-5 py-2 text-xs text-slate-500">{firstName(conversation.name)} sedang mengetik… <span className="text-slate-400">(simulasi)</span></p>}
       {blocked ? (
         <div className="border-t border-slate-200/80 bg-white p-4 pb-[max(16px,env(safe-area-inset-bottom))] text-center">
           <p className="text-xs text-slate-500">Kamu memblokir {conversation.name}. Kamu tidak bisa mengirim pesan.</p>
           <button type="button" onClick={onToggleBlocked} className="mt-2 rounded-full bg-brand-50 px-4 py-2 text-xs font-bold text-brand-700 hover:bg-brand-100">Buka blokir</button>
         </div>
       ) : (
-        <Composer recipient={firstName(conversation.name)} onSend={onSend} />
+        <div>
+          {postContext && <div className="border-t border-slate-200 bg-white px-4 pt-3">
+            <div className="mb-2 flex items-center justify-between gap-3"><p className="text-xs font-semibold text-slate-500">Membahas postingan · Simulasi percakapan</p><button type="button" className="icon-button h-7 w-7" aria-label="Hapus konteks postingan" onClick={onRemoveContext}><X className="h-4 w-4" /></button></div>
+            <PostContextCard context={postContext} />
+          </div>}
+          <Composer key={postContext?.id ?? "plain"} recipient={firstName(conversation.name)} initialText={postContext ? `Halo ${firstName(conversation.name)}, saya tertarik dengan postingan ini. Boleh minta informasi lebih lanjut?` : ""} onSend={onSend} />
+        </div>
       )}
 
       {call && <CallOverlay conversation={conversation} type={call} onEnd={() => { setCall(null); onToast("Panggilan berakhir"); }} />}
     </>
   );
+}
+
+function PostContextCard({ context }: { context: ChatPostContext }) {
+  return <Link href={`/?post=${context.id}`} className="focus-ring flex w-full min-w-0 items-center gap-3 rounded-xl border border-slate-200 bg-white p-3 text-slate-700 transition hover:bg-slate-50">
+    {context.image ? <img src={context.image} alt="" className="h-12 w-12 shrink-0 rounded-lg object-cover" /> : <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-600"><FileText className="h-5 w-5" /></span>}
+    <span className="min-w-0"><span className="block text-[10px] font-semibold text-slate-500">Postingan {context.author}</span><span className="line-clamp-2 text-xs font-bold">{context.title}</span><span className="mt-1 block text-[10px] font-semibold text-brand-600">Lihat postingan ↗</span></span>
+  </Link>;
 }
 
 function MessageRow({ message, conversation, showAuthor, showAvatar, spaced }: { message: ChatMessage; conversation: Conversation; showAuthor: boolean; showAvatar: boolean; spaced: boolean }) {
@@ -407,10 +482,12 @@ function MessageRow({ message, conversation, showAuthor, showAvatar, spaced }: {
       <div className={clsx("flex min-w-0 max-w-[78%] flex-col md:max-w-[65%]", mine ? "items-end" : "items-start")}>
         {showAuthor && message.author && <span className="mb-1 ml-1 text-[11px] font-bold text-brand-600">{message.author.name}</span>}
         {message.kind === "text" && (
-          <p className={clsx(bubble, "flex flex-wrap items-end gap-x-3 px-3.5 py-2 text-[13px] leading-5 md:text-sm")}>
+          <div className={clsx(bubble, "flex flex-wrap items-end gap-x-3 px-3.5 py-2 text-[13px] leading-5 md:text-sm")}>
+            {message.postContext && <div className="mb-2 w-full"><PostContextCard context={message.postContext} /></div>}
+            {message.simulated && <span className="mb-1 block w-full text-[10px] font-semibold text-slate-400">Balasan simulasi</span>}
             <span className="whitespace-pre-wrap break-words">{message.text}</span>
             <MessageMeta message={message} />
-          </p>
+          </div>
         )}
         {message.kind === "image" && (
           <div className={clsx(bubble, "overflow-hidden p-1")}>
@@ -485,8 +562,8 @@ function VoicePlayer({ duration, mine }: { duration: number; mine: boolean }) {
   );
 }
 
-function Composer({ recipient, onSend }: { recipient: string; onSend: (content: ChatMessageContent) => void }) {
-  const [text, setText] = useState("");
+function Composer({ recipient, initialText = "", onSend }: { recipient: string; initialText?: string; onSend: (content: ChatMessageContent) => void }) {
+  const [text, setText] = useState(initialText);
   const [panel, setPanel] = useState<"emoji" | "attach" | null>(null);
   const [recording, setRecording] = useState(false);
   const [seconds, setSeconds] = useState(0);

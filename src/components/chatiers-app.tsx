@@ -17,7 +17,6 @@ import {
   MapPin,
   MessageCircle,
   MessagesSquare,
-  MoreHorizontal,
   Paperclip,
   PenLine,
   Plus,
@@ -35,6 +34,8 @@ import clsx from "clsx";
 import { AuthLink as Link } from "@/components/auth-link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@/components/auth-provider";
+import { PostAuthorMenu } from "@/components/post-author-menu";
+import { useSocial } from "@/components/social-provider";
 import { Avatar } from "@/components/avatar";
 import { AppHeader } from "@/components/app-header";
 import { MobileBottomNav } from "@/components/mobile-bottom-nav";
@@ -635,7 +636,7 @@ function PostCard({ post, index, onOpen, onLike, onSave, onShare }: { post: Post
   }
 
   return (
-    <article style={{ animationDelay: `${index * 80}ms` }} className="animate-fade-up border-y border-slate-100 bg-white md:rounded-2xl md:border md:border-slate-200/80 md:shadow-card">
+    <article style={{ animationDelay: `${index * 80}ms` }} className="relative focus-within:z-10 animate-fade-up border-y border-slate-100 bg-white md:rounded-2xl md:border md:border-slate-200/80 md:shadow-card">
       <div onClick={openFromCard} className="cursor-pointer p-4">
         <PostContent post={post} />
       </div>
@@ -645,7 +646,9 @@ function PostCard({ post, index, onOpen, onLike, onSave, onShare }: { post: Post
 }
 
 function PostContent({ post, authorRef }: { post: Post; authorRef?: React.Ref<HTMLDivElement> }) {
+  const { blocked, toggleBlock } = useSocial();
   const authorProfile = findUserByName(post.author);
+  if (blocked.includes(post.author)) return <div className="py-4 text-sm text-slate-500"><p>Konten {post.author} disembunyikan karena kamu memblokir akun ini.</p><button type="button" onClick={() => toggleBlock(post.author)} className="focus-ring mt-3 rounded-lg bg-slate-100 px-3 py-2 font-bold text-brand-600">Buka blokir</button></div>;
   const postImages = post.images ?? (post.image ? [{ id: `legacy-${post.id}`, name: "Lampiran postingan", url: post.image }] : []);
 
   return (
@@ -661,7 +664,7 @@ function PostContent({ post, authorRef }: { post: Post; authorRef?: React.Ref<HT
           <p className="truncate text-[11px] text-slate-400">{post.role}</p>
         </div>
         <span className={clsx("rounded-full px-2.5 py-1 text-[10px] font-bold ring-1", getCategoryStyles(post.category).badge)}>{getPostCategoryLabel(post.category)}</span>
-        <button className="icon-button -mr-2 -mt-2 h-9 w-9" aria-label="Opsi lainnya"><MoreHorizontal className="h-5 w-5" /></button>
+        <PostAuthorMenu post={post} />
       </div>
 
       <p className="mt-3.5 whitespace-pre-wrap text-[13px] leading-6 text-slate-650 md:text-sm">{post.text}</p>
@@ -705,6 +708,8 @@ function PostContent({ post, authorRef }: { post: Post; authorRef?: React.Ref<HT
 
 function PostActions({ post, onComment, onLike, onSave, onShare }: { post: Post; onComment: () => void } & PostActionHandlers) {
   const { signedIn } = useAuth();
+  const { blocked } = useSocial();
+  if (blocked.includes(post.author)) return null;
   return (
     <div className="grid grid-cols-4 border-t border-slate-100 px-2 py-1.5 sm:px-4">
       <ActionButton icon={Heart} label="Suka" count={post.likes} active={signedIn && Boolean(post.liked)} onClick={onLike} />

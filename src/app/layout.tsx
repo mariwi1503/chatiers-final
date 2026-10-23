@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { StorefrontProvider } from "@/components/storefront-provider";
 import { AuthModal } from "@/components/auth-modal";
+import { SocialProvider } from "@/components/social-provider";
 import { AuthProvider } from "@/components/auth-provider";
 
 export const metadata: Metadata = {
@@ -52,7 +53,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="id" data-scroll-behavior="smooth">
-      <body><AuthProvider><StorefrontProvider>{children}</StorefrontProvider><AuthModal /></AuthProvider></body>
+      <body><AuthProvider><SocialProvider><StorefrontProvider>{children}</StorefrontProvider></SocialProvider><AuthModal /></AuthProvider></body>
     </html>
   );
 }
