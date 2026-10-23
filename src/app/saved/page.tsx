@@ -1,3 +1,4 @@
+import { SessionRequired } from "@/components/session-required";
 import type { Metadata } from "next";
 import { SectionPage } from "@/components/section-page";
 
@@ -7,5 +8,5 @@ export const metadata: Metadata = {
 };
 
 export default function Page() {
-  return <SectionPage section="saved" />;
+  return <SessionRequired><SectionPage section="saved" /></SessionRequired>;
 }

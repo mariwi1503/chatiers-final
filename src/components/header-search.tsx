@@ -4,13 +4,14 @@ import { Clock3, Search, TrendingUp, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
-import { currentUser } from "@/lib/data";
+import { useAuth } from "@/components/auth-provider";
 
-const historyKey = `chatiers:search-history:${currentUser.username}`;
 const recommendations = ["Desain", "Teknologi", "Kerja Remote", "UI Kit", "Fotografi", "Sneaker", "Kopi", "Landing Page", "Bisnis", "Lowongan", "Komunitas", "Keyboard"];
 const normalize = (value: string) => value.trim().toLocaleLowerCase("id-ID");
 
 export function HeaderSearch({ value, onChange, placeholder, compact }: { value: string; onChange?: (value: string) => void; placeholder: string; compact: boolean }) {
+  const { user } = useAuth();
+  const historyKey = `chatiers:search-history:${user?.username ?? "guest"}`;
   const router = useRouter();
   const [draft, setDraft] = useState(value);
   const [open, setOpen] = useState(false);
@@ -21,11 +22,12 @@ export function HeaderSearch({ value, onChange, placeholder, compact }: { value:
 
   useEffect(() => { setDraft(value); }, [value]);
   useEffect(() => {
+    setHistory([]);
     try {
       const stored: unknown = JSON.parse(localStorage.getItem(historyKey) ?? "[]");
       if (Array.isArray(stored)) setHistory(stored.filter((item): item is string => typeof item === "string" && Boolean(item.trim())).slice(0, 10));
     } catch { /* Search stays usable when browser storage is unavailable. */ }
-  }, []);
+  }, [historyKey]);
   useEffect(() => {
     if (!open) return;
     inputRef.current?.focus();
@@ -59,7 +61,7 @@ export function HeaderSearch({ value, onChange, placeholder, compact }: { value:
   const suggested = recommendations.filter((item) => normalize(item).includes(normalize(draft)));
 
   return (
-    <div ref={containerRef} onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false); }} onKeyDown={(event) => { if (event.key === "Escape") { event.stopPropagation(); setOpen(false); inputRef.current?.blur(); } }} className={clsx("min-w-0 md:relative md:block md:max-w-[280px] md:flex-1", open ? "max-md:absolute max-md:inset-0 max-md:z-30 max-md:bg-white" : "max-md:absolute max-md:right-4", compact && !open && "max-md:invisible")}>
+    <div ref={containerRef} onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false); }} onKeyDown={(event) => { if (event.key === "Escape") { event.stopPropagation(); setOpen(false); inputRef.current?.blur(); } }} className={clsx("min-w-0 md:relative md:block md:max-w-[280px] md:flex-1", open ? "max-md:absolute max-md:inset-0 max-md:z-40 max-md:bg-white" : user ? "max-md:absolute max-md:right-24" : "max-md:absolute max-md:right-4", compact && !open && "max-md:invisible")}>
       <button type="button" onClick={() => setOpen(true)} aria-label={placeholder} aria-expanded={open} className={clsx("icon-button -mr-2 md:hidden", open && "hidden")}><Search className="h-5 w-5" />{value && <span className="absolute right-0 top-1 h-2 w-2 rounded-full bg-brand-600" />}</button>
       <form role="search" onSubmit={(event) => { event.preventDefault(); search(draft); }} className={clsx("items-center gap-2 max-md:h-16 max-md:px-4 md:flex", open ? "flex" : "hidden")}>
         <div className="relative min-w-0 flex-1">

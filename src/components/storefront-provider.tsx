@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useRef, useState, type Dispatch, type ReactNode, type SetStateAction } from "react";
+import { useAuth } from "@/components/auth-provider";
 import { posts, type Post } from "@/lib/data";
 import { demoProducts } from "@/lib/demo-products";
 import { deleteProduct, publishProduct, saveProduct, type Company, type Product, type ProductDraft, type Storefront } from "@/lib/storefront";
@@ -24,6 +25,7 @@ type StoreContext = Storefront & {
 const Context = createContext<StoreContext | null>(null);
 
 export function StorefrontProvider({ children }: { children: ReactNode }) {
+  const { signedIn } = useAuth();
   const [store, setStore] = useState(initialStore);
   const storeRef = useRef(initialStore);
   const [ready, setReady] = useState(false);
@@ -51,7 +53,7 @@ export function StorefrontProvider({ children }: { children: ReactNode }) {
   }, []);
 
   function commit(change: (value: Storefront) => Storefront) {
-    if (!ready) return false;
+    if (!ready || !signedIn) return false;
     try {
       const next = change(storeRef.current);
       // Save the catalog and its feed references together, before reporting success.

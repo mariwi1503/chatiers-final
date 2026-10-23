@@ -32,18 +32,20 @@ import {
   X,
 } from "lucide-react";
 import clsx from "clsx";
-import Link from "next/link";
+import { AuthLink as Link } from "@/components/auth-link";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useAuth } from "@/components/auth-provider";
 import { Avatar } from "@/components/avatar";
 import { AppHeader } from "@/components/app-header";
 import { MobileBottomNav } from "@/components/mobile-bottom-nav";
+import { GuestFeedGate, GUEST_FEED_LIMIT } from "@/components/guest-feed-gate";
 import { Stories } from "@/components/stories";
 import { useStorefront } from "@/components/storefront-provider";
 import { ProductReference } from "@/components/product-reference";
 import {
   categories,
   contacts,
-  currentUser,
+  currentUser as demoUser,
   getPostTitle,
   demoPostViews,
   postCategories,
@@ -180,6 +182,8 @@ function countLoadedComments(comments: PostComment[]) {
 }
 
 export function ChatiersApp() {
+  const currentUser = useAuth().user ?? demoUser;
+  const { signedIn, ready, requireSession } = useAuth();
   const [activeCategory, setActiveCategory] = useState<"all" | PostCategory>("all");
   const [selectedCity, setSelectedCity] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
@@ -191,6 +195,9 @@ export function ChatiersApp() {
   const [composerOpen, setComposerOpen] = useState(false);
   const composerRef = useRef<HTMLDivElement>(null);
   const [chatOpen, setChatOpen] = useState(false);
+  useEffect(() => {
+    if (!signedIn) { setComposerOpen(false); setChatOpen(false); }
+  }, [signedIn]);
   const [toast, setToast] = useState<string | null>(null);
   const [detail, setDetail] = useState<{ id: number; focusComment: boolean } | null>(null);
   const [detailClosing, setDetailClosing] = useState(false);
@@ -224,13 +231,16 @@ export function ChatiersApp() {
     });
   }, [activeCategory, selectedCity, posts, findProduct, searchQuery]);
 
+  const visiblePosts = signedIn ? filteredPosts : filteredPosts.slice(0, GUEST_FEED_LIMIT);
+  const feedLimited = !signedIn && filteredPosts.length > GUEST_FEED_LIMIT;
+
   useEffect(() => {
     const url = new URL(window.location.href);
-    if (url.searchParams.get("buat") !== "1") return;
-    setComposerOpen(true);
+    if (!ready || url.searchParams.get("buat") !== "1") return;
+    if (requireSession()) setComposerOpen(true);
     url.searchParams.delete("buat");
     window.history.replaceState(null, "", url.pathname + url.search + url.hash);
-  }, []);
+  }, [ready, requireSession]);
 
   useEffect(() => {
     function syncDetailFromUrl() {
@@ -291,15 +301,18 @@ export function ChatiersApp() {
   }
 
   function toggleLike(id: number) {
+    if (!requireSession()) return;
     updatePost(id, (post) => ({ ...post, liked: !post.liked, likes: post.likes + (post.liked ? -1 : 1) }));
   }
 
   function toggleSave(post: Post) {
+    if (!requireSession()) return;
     updatePost(post.id, (item) => ({ ...item, saved: !item.saved }));
     showToast(post.saved ? "Dihapus dari simpanan" : "Disimpan untuk nanti");
   }
 
   function addComment(postId: number, text: string, replyTarget: CommentReplyTarget | null) {
+    if (!requireSession()) return "";
     const newId = `comment-${postId}-${Date.now()}`;
     updatePost(postId, (post) => {
       const items = post.commentItems ?? [];
@@ -322,6 +335,7 @@ export function ChatiersApp() {
   }
 
   function addPost(payload: ComposerPayload) {
+    if (!requireSession()) return;
     const newPost: Post = {
       id: Date.now(),
       author: currentUser.name,
@@ -357,9 +371,9 @@ export function ChatiersApp() {
 
         <section className="w-full min-w-0 pb-10 md:max-w-[680px] md:justify-self-center md:pt-4 lg:max-w-none">
           <div className={clsx(detail && !detailClosing && "md:hidden")}>
-          <Stories onToast={showToast} />
-          <CategoryTabs active={activeCategory} onChange={setActiveCategory} composerRef={composerRef} onCreatePost={() => setComposerOpen(true)} />
-          <ComposerCard onOpen={() => setComposerOpen(true)} containerRef={composerRef} />
+          {signedIn && <Stories onToast={showToast} />}
+          <CategoryTabs active={activeCategory} onChange={setActiveCategory} composerRef={composerRef} onCreatePost={() => { if (requireSession()) setComposerOpen(true); }} />
+          {signedIn ? <ComposerCard onOpen={() => setComposerOpen(true)} containerRef={composerRef} /> : <div ref={composerRef} className="surface mt-3 rounded-2xl p-4 text-sm text-slate-600"><Link href="/login" className="font-bold text-brand-600">Masuk</Link> untuk berbagi cerita dengan komunitas.</div>}
 
           <div className="mt-3 flex items-center justify-between gap-3 px-4 md:mt-3 md:px-1">
             <div className="min-w-0">
@@ -385,7 +399,7 @@ export function ChatiersApp() {
           </div>
 
           <div className="mt-2.5 space-y-3">
-            {filteredPosts.map((post, index) => (
+            {visiblePosts.map((post, index) => (
               <PostCard
                 key={post.id}
                 post={post}
@@ -396,6 +410,7 @@ export function ChatiersApp() {
                 onShare={() => showToast("Tautan postingan disalin")}
               />
             ))}
+            {feedLimited && <GuestFeedGate />}
             {filteredPosts.length === 0 && <EmptyFeed onReset={() => { setActiveCategory("all"); setSelectedCity(""); setSearchQuery(""); }} />}
           </div>
           </div>
@@ -415,13 +430,13 @@ export function ChatiersApp() {
           )}
         </section>
 
-        <RightRail onChat={() => setChatOpen(true)} />
+        <RightRail onChat={() => { if (requireSession()) setChatOpen(true); }} />
       </main>
 
       <MobileBottomNav active="feed" />
 
-      <ComposerModal open={composerOpen} onClose={() => setComposerOpen(false)} onSubmit={addPost} />
-      <ChatPanel open={chatOpen} onClose={() => setChatOpen(false)} />
+      <ComposerModal open={signedIn && composerOpen} onClose={() => setComposerOpen(false)} onSubmit={addPost} />
+      <ChatPanel open={signedIn && chatOpen} onClose={() => setChatOpen(false)} />
 
       {toast && (
         <div className="fixed bottom-24 left-1/2 z-[80] -translate-x-1/2 animate-fade-up rounded-full bg-ink px-5 py-3 text-sm font-semibold text-white shadow-float md:bottom-8">
@@ -433,8 +448,11 @@ export function ChatiersApp() {
 }
 
 function LeftSidebar() {
+  const currentUser = useAuth().user ?? demoUser;
+  const { signedIn } = useAuth();
   return (
     <aside className="sticky top-20 hidden h-[calc(100vh-96px)] flex-col py-4 lg:flex">
+      {signedIn && <>
       <Link href="/profile" className="block rounded-2xl bg-gradient-to-br from-slate-950 via-blue-950 to-brand-700 p-4 text-white shadow-card transition hover:-translate-y-0.5">
         <div className="flex items-center gap-3">
           <Avatar src={currentUser.avatar} alt={currentUser.name} size="lg" online />
@@ -470,6 +488,8 @@ function LeftSidebar() {
         </div>
       </section>
 
+      </>}
+
       <section className="mt-3 overflow-hidden rounded-2xl bg-slate-950 p-3.5 text-white shadow-card">
         <div className="flex items-center gap-2 text-[9px] font-extrabold uppercase tracking-[0.12em] text-blue-300">
           <CalendarDays className="h-3.5 w-3.5" /> Agenda terdekat
@@ -478,6 +498,12 @@ function LeftSidebar() {
         <p className="mt-1 text-[9px] leading-4 text-slate-400">19 Oktober · 19.00 WIB · Online</p>
         <button className="mt-3 w-full rounded-lg bg-white/10 py-2 text-[10px] font-bold text-white transition hover:bg-white/20">Lihat detail</button>
       </section>
+
+      {!signedIn && <section className="surface mt-3 rounded-2xl p-4">
+        <h2 className="text-sm font-bold text-slate-950">Terhubung di Chatiers</h2>
+        <p className="mt-2 text-xs leading-5 text-slate-500">Masuk untuk berbagi cerita dan terhubung dengan komunitasmu.</p>
+        <Link href="/login" className="focus-ring mt-4 flex w-full items-center justify-center rounded-xl bg-brand-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-brand-700">Masuk</Link>
+      </section>}
 
       <div className="mt-auto px-3 text-[10px] leading-5 text-slate-400">
         <p>Tentang · Bantuan · Privasi</p>
@@ -582,12 +608,13 @@ function CategoryTabs({ active, onChange, composerRef, onCreatePost }: { active:
 }
 
 function ComposerCard({ onOpen, containerRef }: { onOpen: () => void; containerRef: React.Ref<HTMLDivElement> }) {
+  const currentUser = useAuth().user ?? demoUser;
   return (
     <div ref={containerRef} className="mt-2 border-y border-slate-100 bg-white p-4 md:rounded-2xl md:border md:border-slate-200/80 md:shadow-card">
       <div className="flex gap-3">
         <Avatar src={currentUser.avatar} alt={currentUser.name} size="lg" />
         <button onClick={onOpen} className="focus-ring flex-1 rounded-2xl bg-slate-100 px-4 text-left text-sm text-slate-500 transition hover:bg-slate-50 hover:ring-1 hover:ring-slate-200">
-          Bagikan sesuatu ke komunitas, Arya...
+          Bagikan sesuatu ke komunitas, {currentUser.name.split(" ")[0]}...
         </button>
       </div>
     </div>
@@ -677,12 +704,13 @@ function PostContent({ post, authorRef }: { post: Post; authorRef?: React.Ref<HT
 }
 
 function PostActions({ post, onComment, onLike, onSave, onShare }: { post: Post; onComment: () => void } & PostActionHandlers) {
+  const { signedIn } = useAuth();
   return (
     <div className="grid grid-cols-4 border-t border-slate-100 px-2 py-1.5 sm:px-4">
-      <ActionButton icon={Heart} label="Suka" count={post.likes} active={Boolean(post.liked)} onClick={onLike} />
+      <ActionButton icon={Heart} label="Suka" count={post.likes} active={signedIn && Boolean(post.liked)} onClick={onLike} />
       <ActionButton icon={MessageCircle} label="Komentar" count={post.comments} onClick={onComment} />
       <ActionButton icon={Share2} label="Bagikan" count={post.shares} onClick={onShare} />
-      <ActionButton icon={Bookmark} label="Simpan" active={Boolean(post.saved)} onClick={onSave} />
+      <ActionButton icon={Bookmark} label="Simpan" active={signedIn && Boolean(post.saved)} onClick={onSave} />
     </div>
   );
 }
@@ -703,6 +731,8 @@ function PostDetailScreen({
   onBack: () => void;
   onComment: (text: string, replyTarget: CommentReplyTarget | null) => string;
 } & PostActionHandlers) {
+  const currentUser = useAuth().user ?? demoUser;
+  const { signedIn, requireSession } = useAuth();
   const [comment, setComment] = useState("");
   const [replyTarget, setReplyTarget] = useState<CommentReplyTarget | null>(null);
   const [entered, setEntered] = useState(false);
@@ -765,11 +795,13 @@ function PostDetailScreen({
   }
 
   function startReply(target: CommentReplyTarget) {
+    if (!requireSession()) return;
     setReplyTarget(target);
     window.setTimeout(() => commentInputRef.current?.focus(), 0);
   }
 
   function focusComposer() {
+    if (!requireSession()) return;
     commentsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     commentInputRef.current?.focus({ preventScroll: true });
   }
@@ -892,7 +924,7 @@ function PostDetailScreen({
               </div>
             </div>
 
-            <form onSubmit={sendComment} className="shrink-0 border-t border-slate-200/70 bg-white px-3 pb-[max(12px,env(safe-area-inset-bottom))] pt-3 md:sticky md:bottom-4 md:z-10 md:mt-3 md:rounded-2xl md:border md:pb-3 md:shadow-card">
+            {signedIn ? <form onSubmit={sendComment} className="shrink-0 border-t border-slate-200/70 bg-white px-3 pb-[max(12px,env(safe-area-inset-bottom))] pt-3 md:sticky md:bottom-4 md:z-10 md:mt-3 md:rounded-2xl md:border md:pb-3 md:shadow-card">
               <div className="mx-auto w-full max-w-[680px]">
                 {replyTarget && (
                   <div className="mb-2 ml-10 flex items-center gap-2 rounded-xl bg-brand-50 px-3 py-2 text-[10px] text-brand-700">
@@ -908,7 +940,7 @@ function PostDetailScreen({
                   </div>
                 </div>
               </div>
-            </form>
+            </form> : <div className="surface p-4 text-center text-sm"><Link href="/login" className="font-semibold text-brand-600">Masuk untuk menulis komentar</Link></div>}
           </>
         )}
       </section>
@@ -917,11 +949,13 @@ function PostDetailScreen({
 }
 
 function CommentThread({ comment, onReply }: { comment: PostComment; onReply: (target: CommentReplyTarget) => void }) {
+  const currentUser = useAuth().user ?? demoUser;
+  const { signedIn } = useAuth();
   return (
     <div>
       <CommentBubble
         comment={comment}
-        own={comment.author === currentUser.name}
+        own={signedIn && comment.author === currentUser.name}
         onReply={() => onReply({ rootId: comment.id, commentId: comment.id, author: comment.author, text: comment.text })}
       />
       {comment.replies && comment.replies.length > 0 && (
@@ -930,7 +964,7 @@ function CommentThread({ comment, onReply }: { comment: PostComment; onReply: (t
             <CommentBubble
               key={reply.id}
               comment={reply}
-              own={reply.author === currentUser.name}
+              own={signedIn && reply.author === currentUser.name}
               nested
               onReply={() => onReply({ rootId: comment.id, commentId: reply.id, author: reply.author, text: reply.text })}
             />
@@ -942,6 +976,8 @@ function CommentThread({ comment, onReply }: { comment: PostComment; onReply: (t
 }
 
 function CommentBubble({ comment, own, nested, onReply }: { comment: PostComment | PostCommentReply; own: boolean; nested?: boolean; onReply: () => void }) {
+  const currentUser = useAuth().user ?? demoUser;
+  const { signedIn } = useAuth();
   const replyToAuthor = "replyToAuthor" in comment ? comment.replyToAuthor : undefined;
   return (
     <div id={comment.id} className={clsx("flex items-end gap-2 scroll-mt-4", own ? "justify-end" : "justify-start")}>
@@ -949,7 +985,7 @@ function CommentBubble({ comment, own, nested, onReply }: { comment: PostComment
       <div className={clsx(nested ? "max-w-[82%]" : "max-w-[78%]", own && "text-right")}>
         <div className={clsx("rounded-2xl px-3.5 py-2.5 text-left shadow-sm", own ? "rounded-br-md bg-brand-600 text-white" : "rounded-bl-md border border-slate-200 bg-white text-slate-700")}>
           <p className={clsx("mb-1 text-[10px] font-extrabold", own ? "text-blue-100" : "text-slate-500")}>{own ? "Kamu" : comment.author}</p>
-          {replyToAuthor && <p className={clsx("mb-1 text-[9px] font-semibold", own ? "text-blue-100/80" : "text-brand-600")}>↪ membalas {replyToAuthor === currentUser.name ? "Kamu" : replyToAuthor}</p>}
+          {replyToAuthor && <p className={clsx("mb-1 text-[9px] font-semibold", own ? "text-blue-100/80" : "text-brand-600")}>↪ membalas {signedIn && replyToAuthor === currentUser.name ? "Kamu" : replyToAuthor}</p>}
           <p className="whitespace-pre-wrap break-words text-xs leading-5">{comment.text}</p>
         </div>
         <div className={clsx("mt-1 flex items-center gap-2 px-1 text-[9px]", own ? "justify-end" : "justify-start")}>
@@ -1054,9 +1090,10 @@ function EmptyFeed({ onReset }: { onReset: () => void }) {
 }
 
 function RightRail({ onChat }: { onChat: () => void }) {
+  const { signedIn } = useAuth();
   return (
     <aside className="sticky top-20 hidden h-[calc(100vh-96px)] space-y-3 overflow-y-auto py-4 [scrollbar-width:none] xl:block">
-      <section className="rounded-2xl bg-gradient-to-br from-brand-700 via-blue-700 to-violet-700 p-4 text-white shadow-card">
+      {signedIn && <section className="rounded-2xl bg-gradient-to-br from-brand-700 via-blue-700 to-violet-700 p-4 text-white shadow-card">
         <div className="flex items-center gap-2 text-xs font-bold text-blue-100"><Sparkles className="h-4 w-4" /> MULAI DARI SINI</div>
         <h2 className="mt-3 text-xl font-extrabold leading-tight">Apa yang ingin kamu capai hari ini?</h2>
         <p className="mt-2 text-xs leading-5 text-blue-100">Komunitas Chatiers siap membantu langkah berikutmu.</p>
@@ -1068,7 +1105,7 @@ function RightRail({ onChat }: { onChat: () => void }) {
             </button>
           ))}
         </div>
-      </section>
+      </section>}
 
       <section className="surface rounded-2xl p-3.5">
         <div className="flex items-center justify-between">
@@ -1085,6 +1122,7 @@ function RightRail({ onChat }: { onChat: () => void }) {
         </div>
       </section>
 
+      {signedIn && <>
       <section className="surface rounded-2xl p-3.5">
         <div className="flex items-center justify-between"><h2 className="text-sm font-bold">Orang yang mungkin kamu kenal</h2><button className="text-[10px] font-bold text-brand-600">Semua</button></div>
         <div className="mt-3 space-y-3">
@@ -1103,6 +1141,7 @@ function RightRail({ onChat }: { onChat: () => void }) {
         <span className="flex-1"><b className="block text-xs">3 teman aktif</b><span className="text-[10px] text-slate-400">Mulai percakapan</span></span>
         <MessageCircle className="h-5 w-5 text-brand-600" />
       </button>
+      </>}
     </aside>
   );
 }
@@ -1157,6 +1196,7 @@ const initialComposerForm: ComposerFormState = {
 const composerEmojis = ["😀", "🎉", "💡", "🚀", "❤️", "🙏", "👍", "🔥", "✨", "📣", "💼", "🛍️"];
 
 function ComposerModal({ open, onClose, onSubmit }: { open: boolean; onClose: () => void; onSubmit: (payload: ComposerPayload) => void }) {
+  const currentUser = useAuth().user ?? demoUser;
   const [form, setForm] = useState<ComposerFormState>(initialComposerForm);
   const [images, setImages] = useState<PostImage[]>([]);
   const [attachments, setAttachments] = useState<PostAttachment[]>([]);

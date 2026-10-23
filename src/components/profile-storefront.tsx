@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useEffect, useId, useRef, useState, type DragEvent, type ReactNode } from "react";
 import { Avatar } from "./avatar";
 import { useStorefront } from "./storefront-provider";
+import { useAuth } from "@/components/auth-provider";
 import { currentUser } from "@/lib/data";
 import type { UserProfile } from "@/lib/users";
 import { PRODUCT_CATEGORIES, SHARE_COOLDOWN_MS, formatProductPrice, formatShareDate, getNextShareAt, getProductShares, type Company, type Product, type ProductDraft } from "@/lib/storefront";
@@ -217,7 +218,8 @@ function ProductDetail(props: { product: Product; seller: UserProfile } | ({ pro
   const shares = getProductShares({ posts }, product.id);
   const latestShare = shares.reduce<(typeof shares)[number] | undefined>((latest, post) => !latest || post.id > latest.id ? post : latest, undefined);
   const sold = product.status === "sold";
-  const owner = seller ?? currentUser;
+  const { user } = useAuth();
+  const owner = seller ?? user ?? currentUser;
 
   return <>
     <ProductImage product={product} large />

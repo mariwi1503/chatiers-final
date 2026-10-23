@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import clsx from "clsx";
 import { useEffect, useRef, useState } from "react";
+import { useAuth } from "@/components/auth-provider";
 import { Avatar } from "@/components/avatar";
 import {
   initialStories,
@@ -37,6 +38,7 @@ type StoryEntry = {
 };
 
 export function Stories({ onToast }: { onToast: (message: string) => void }) {
+  const { signedIn, requireSession } = useAuth();
   const [storyGroups, setStoryGroups] = useState<StoryGroup[]>(initialStories);
   const [activeGroupIndex, setActiveGroupIndex] = useState<number | null>(null);
   const [activeItemIndex, setActiveItemIndex] = useState(0);
@@ -146,6 +148,7 @@ export function Stories({ onToast }: { onToast: (message: string) => void }) {
   }
 
   function addStory(story: NewStory) {
+    if (!requireSession()) return;
     const item: StoryItem = {
       ...story,
       id: `story-${Date.now()}`,
@@ -189,6 +192,7 @@ export function Stories({ onToast }: { onToast: (message: string) => void }) {
       <section aria-label="Cerita" className="border-b border-slate-100 bg-white px-4 py-3.5 md:rounded-2xl md:border md:border-slate-200/80 md:shadow-card">
         <div className="flex gap-3.5 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {storyGroups.map((story, groupIndex) => {
+            if (story.own && !signedIn) return null;
             const hasStories = story.items.length > 0;
             const allViewed = hasStories && story.items.every((item) => item.viewed);
 
@@ -243,13 +247,13 @@ export function Stories({ onToast }: { onToast: (message: string) => void }) {
           onNext={moveNext}
           onPrevious={movePrevious}
           onDelete={deleteActiveStory}
-          onReact={(emoji) => onToast(`${emoji} Reaksi terkirim ke ${activeGroup.name}`)}
-          onReply={(message) => onToast(`Balasan “${message}” terkirim ke ${activeGroup.name}`)}
+          onReact={(emoji) => { if (requireSession()) onToast(`${emoji} Reaksi terkirim ke ${activeGroup.name}`); }}
+          onReply={(message) => { if (requireSession()) onToast(`Balasan “${message}” terkirim ke ${activeGroup.name}`); }}
           onSelectStory={selectStory}
         />
       )}
 
-      {composerOpen && (
+      {signedIn && composerOpen && (
         <StoryComposer
           onClose={() => setComposerOpen(false)}
           onSubmit={addStory}

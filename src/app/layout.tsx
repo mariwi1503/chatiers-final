@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { StorefrontProvider } from "@/components/storefront-provider";
+import { AuthModal } from "@/components/auth-modal";
+import { AuthProvider } from "@/components/auth-provider";
 
 export const metadata: Metadata = {
   title: {
@@ -50,7 +52,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="id" data-scroll-behavior="smooth">
-      <body><StorefrontProvider>{children}</StorefrontProvider></body>
+      <body><AuthProvider><StorefrontProvider>{children}</StorefrontProvider><AuthModal /></AuthProvider></body>
     </html>
   );
 }

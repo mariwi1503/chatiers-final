@@ -1,3 +1,4 @@
+import { SessionRequired } from "@/components/session-required";
 import type { Metadata } from "next";
 import { MessagesPage } from "@/components/messages-page";
 
@@ -7,5 +8,5 @@ export const metadata: Metadata = {
 };
 
 export default function Page() {
-  return <MessagesPage />;
+  return <SessionRequired><MessagesPage /></SessionRequired>;
 }

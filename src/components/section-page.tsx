@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import clsx from "clsx";
 import { useState } from "react";
+import { useAuth } from "@/components/auth-provider";
 import { Avatar } from "@/components/avatar";
 import { AppHeader } from "@/components/app-header";
 import { MobileBottomNav } from "@/components/mobile-bottom-nav";
@@ -44,6 +45,7 @@ export function SectionPage({ section }: { section: SectionKind }) {
 }
 
 function CommunitiesSection({ query }: { query: string }) {
+  const { signedIn, requireSession } = useAuth();
   const [joined, setJoined] = useState<number[]>([1]);
   const normalizedQuery = query.trim().toLocaleLowerCase("id-ID");
   const filtered = communities.filter((item) => [item.name, item.description].some((value) => value.toLocaleLowerCase("id-ID").includes(normalizedQuery)));
@@ -53,8 +55,8 @@ function CommunitiesSection({ query }: { query: string }) {
       <div className="mb-5"><h1 className="text-2xl font-black text-slate-950">Komunitas</h1><p className="mt-1 text-sm text-slate-500">Temukan ruang diskusi sesuai minat dan tujuanmu.</p></div>
       <div className="grid gap-3 sm:grid-cols-2">
         {filtered.map((community) => {
-          const isJoined = joined.includes(community.id);
-          return <article key={community.id} className="surface rounded-2xl p-4"><div className="flex items-start gap-3"><span className={clsx("flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br text-sm font-black text-white", community.color)}>{community.icon}</span><div className="min-w-0"><h2 className="font-extrabold text-slate-900">{community.name}</h2><p className="mt-1 text-xs leading-5 text-slate-500">{community.description}</p></div></div><div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-3"><span className="text-[10px] font-semibold text-slate-400">{community.members}</span><button onClick={() => setJoined((items) => isJoined ? items.filter((id) => id !== community.id) : [...items, community.id])} className={clsx("flex items-center gap-1.5 rounded-full px-3 py-2 text-[11px] font-bold transition", isJoined ? "bg-emerald-50 text-emerald-600" : "bg-brand-600 text-white hover:bg-brand-700")}>{isJoined && <Check className="h-3.5 w-3.5" />}{isJoined ? "Bergabung" : "Gabung"}</button></div></article>;
+          const isJoined = signedIn && joined.includes(community.id);
+          return <article key={community.id} className="surface rounded-2xl p-4"><div className="flex items-start gap-3"><span className={clsx("flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br text-sm font-black text-white", community.color)}>{community.icon}</span><div className="min-w-0"><h2 className="font-extrabold text-slate-900">{community.name}</h2><p className="mt-1 text-xs leading-5 text-slate-500">{community.description}</p></div></div><div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-3"><span className="text-[10px] font-semibold text-slate-400">{community.members}</span><button onClick={() => { if (requireSession()) setJoined((items) => isJoined ? items.filter((id) => id !== community.id) : [...items, community.id]); }} className={clsx("flex items-center gap-1.5 rounded-full px-3 py-2 text-[11px] font-bold transition", isJoined ? "bg-emerald-50 text-emerald-600" : "bg-brand-600 text-white hover:bg-brand-700")}>{isJoined && <Check className="h-3.5 w-3.5" />}{isJoined ? "Bergabung" : "Gabung"}</button></div></article>;
         })}
       </div>
       {filtered.length === 0 && <EmptySearch text="Komunitas tidak ditemukan." />}

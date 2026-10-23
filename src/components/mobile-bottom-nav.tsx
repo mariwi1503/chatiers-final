@@ -2,11 +2,11 @@
 
 import { Bell, MessageCircle, Newspaper, UserRound } from "lucide-react";
 import clsx from "clsx";
-import Link from "next/link";
+import { AuthLink as Link } from "@/components/auth-link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { NotificationList } from "@/components/notifications";
-import { currentUser } from "@/lib/data";
+import { useAuth } from "@/components/auth-provider";
 
 type BottomSection = "feed" | "messages" | "profile";
 
@@ -16,6 +16,7 @@ const HIDE_SCROLL_DISTANCE = 80;
 const SHOW_SCROLL_DISTANCE = 16;
 
 export function MobileBottomNav({ active, messagesBadge = true }: { active?: BottomSection; messagesBadge?: boolean }) {
+  const { user, signedIn, requireSession } = useAuth();
   const pathname = usePathname();
   const navRef = useRef<HTMLElement>(null);
   const [hidden, setHidden] = useState(false);
@@ -84,6 +85,7 @@ export function MobileBottomNav({ active, messagesBadge = true }: { active?: Bot
   }, [pathname, notificationsOpen]);
 
   function openNotifications() {
+    if (!requireSession()) return;
     setNotificationsOpen(true);
     setNotificationsSeen(true);
   }
@@ -93,13 +95,13 @@ export function MobileBottomNav({ active, messagesBadge = true }: { active?: Bot
       <nav ref={navRef} aria-label="Navigasi bawah" aria-hidden={navHidden} inert={navHidden} onFocusCapture={() => setHidden(false)} className={clsx("fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 px-3 pb-[calc(4px+env(safe-area-inset-bottom))] pt-1 backdrop-blur-xl transition-[transform,opacity] motion-reduce:transition-none motion-reduce:duration-0 md:hidden", navHidden ? "pointer-events-none translate-y-[calc(100%+2px)] opacity-0 duration-200 ease-in" : "translate-y-0 opacity-100 duration-300 ease-out")}>
         <div className="grid grid-cols-4">
           <BottomItem icon={Newspaper} label="Feed" href="/" active={active === "feed"} />
-          <BottomItem icon={MessageCircle} label="Pesan" href="/messages" active={active === "messages"} badge={messagesBadge} />
-          <BottomItem icon={Bell} label="Notifikasi" active={notificationsOpen} badge={!notificationsSeen} onClick={openNotifications} />
-          <BottomItem icon={UserRound} label="Profil" href="/profile" active={active === "profile"} avatarSrc={currentUser?.avatar} />
+          <BottomItem icon={MessageCircle} label="Pesan" href={signedIn ? "/messages" : "/login"} active={active === "messages"} badge={signedIn && messagesBadge} />
+          <BottomItem icon={Bell} label="Notifikasi" active={signedIn && notificationsOpen} badge={signedIn && !notificationsSeen} onClick={openNotifications} />
+          <BottomItem icon={UserRound} label={signedIn ? "Profil" : "Masuk"} href={signedIn ? "/profile" : "/login"} active={active === "profile"} avatarSrc={user?.avatar} />
         </div>
       </nav>
 
-      {notificationsOpen && (
+      {signedIn && notificationsOpen && (
         <div className="fixed inset-0 z-[60] flex items-end bg-slate-950/30 backdrop-blur-[2px] md:hidden" onMouseDown={(event) => event.target === event.currentTarget && setNotificationsOpen(false)}>
           <section className="max-h-[80vh] w-full animate-fade-up overflow-y-auto rounded-t-3xl bg-white px-2 pb-[max(16px,env(safe-area-inset-bottom))] pt-2 shadow-float" aria-label="Notifikasi">
             <button type="button" onClick={() => setNotificationsOpen(false)} className="mx-auto mb-1 flex h-5 w-full items-center justify-center" aria-label="Tutup notifikasi"><span className="h-1.5 w-10 rounded-full bg-slate-200" /></button>

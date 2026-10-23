@@ -1,15 +1,15 @@
 "use client";
 
-import { Bell, ChevronDown, Menu, MessageCircle, Newspaper, Users } from "lucide-react";
+import { Bell, Menu, MessageCircle, Newspaper, Users } from "lucide-react";
 import clsx from "clsx";
-import Link from "next/link";
+import { AuthLink as Link } from "@/components/auth-link";
 import { useState, type ReactNode } from "react";
 import { HeaderSearch } from "@/components/header-search";
-import { Avatar } from "@/components/avatar";
+import { AccountMenu } from "@/components/account-menu";
 import { Logo } from "@/components/logo";
 import { MobileMenu } from "@/components/mobile-menu";
 import { NotificationList } from "@/components/notifications";
-import { currentUser } from "@/lib/data";
+import { useAuth } from "@/components/auth-provider";
 
 export type HeaderSection = "feed" | "messages" | "communities" | "saved" | "profile";
 
@@ -23,6 +23,7 @@ const headerNavigation = [
 export function AppHeader({ active, searchQuery, onSearchChange, searchPlaceholder = "Cari di Chatiers", compact, mobileTitle }: { active?: HeaderSection; searchQuery?: string; onSearchChange?: (value: string) => void; searchPlaceholder?: string; compact?: { visible: boolean; content: ReactNode }; mobileTitle?: string }) {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const { signedIn } = useAuth();
   const compactVisible = Boolean(compact?.visible);
 
   return (
@@ -31,16 +32,16 @@ export function AppHeader({ active, searchQuery, onSearchChange, searchPlacehold
       <div className="relative mx-auto flex h-16 max-w-[1200px] items-center gap-4 px-4">
         <button type="button" className={clsx("icon-button -ml-2 shrink-0 transition-opacity duration-200 lg:hidden", compactVisible && "max-md:opacity-0")} onClick={() => setMenuOpen(true)} aria-label="Buka menu" aria-expanded={menuOpen}><Menu className="h-5 w-5" /></button>
 
-        <Link href="/" aria-label="Kembali ke feed" className={clsx("flex shrink-0 items-center transition-opacity duration-200 max-md:absolute max-md:left-1/2 max-md:-translate-x-1/2", mobileTitle && "max-md:hidden", compactVisible && "max-md:opacity-0")}>
-          <Logo compact className="w-[120px] shrink-0 md:w-[160px]" />
+        <Link href="/" aria-label="Kembali ke feed" className={clsx("flex shrink-0 items-center transition-opacity duration-200 max-md:mr-auto", mobileTitle && "max-md:hidden", compactVisible && "max-md:opacity-0")}>
+          <Logo compact className="w-[104px] shrink-0 md:w-[160px]" />
         </Link>
 
-        {mobileTitle && <p className={clsx("absolute left-1/2 max-w-[calc(100%-120px)] -translate-x-1/2 truncate text-base font-bold text-slate-950 transition-opacity duration-200 md:hidden", compactVisible && "opacity-0")}>{mobileTitle}</p>}
+        {mobileTitle && <p className={clsx("absolute left-16 max-w-[calc(100%-200px)] truncate text-base font-bold text-slate-950 transition-opacity duration-200 md:hidden", compactVisible && "opacity-0")}>{mobileTitle}</p>}
 
         <HeaderSearch value={searchQuery ?? ""} onChange={onSearchChange} placeholder={searchPlaceholder} compact={compactVisible} />
 
         {compact && (
-          <div inert={!compactVisible} aria-hidden={!compactVisible} className={clsx("absolute inset-0 z-20 flex items-center gap-1 px-2 transition duration-200 ease-out motion-reduce:transition-none md:hidden", compactVisible ? "translate-y-0 opacity-100" : "pointer-events-none translate-y-2 opacity-0")}>
+          <div inert={!compactVisible} aria-hidden={!compactVisible} className={clsx("absolute inset-0 z-20 flex items-center gap-1 py-0 pl-2 pr-16 transition duration-200 ease-out motion-reduce:transition-none md:hidden", compactVisible ? "translate-y-0 opacity-100" : "pointer-events-none translate-y-2 opacity-0")}>
             {compact.content}
           </div>
         )}
@@ -50,7 +51,7 @@ export function AppHeader({ active, searchQuery, onSearchChange, searchPlacehold
             {headerNavigation.map((item) => {
               const isActive = item.id === active;
               return (
-                <Link key={item.id} href={item.href} aria-current={isActive ? "page" : undefined} className={clsx("group relative flex min-w-[66px] flex-col items-center justify-center gap-1 px-1.5 text-[11px] font-bold transition xl:min-w-[74px]", isActive ? "text-brand-700" : "text-slate-500 hover:text-slate-950")}>
+                <Link key={item.id} href={item.id === "messages" && !signedIn ? "/login" : item.href} aria-current={isActive ? "page" : undefined} className={clsx("group relative flex min-w-[66px] flex-col items-center justify-center gap-1 px-1.5 text-[11px] font-bold transition xl:min-w-[74px]", isActive ? "text-brand-700" : "text-slate-500 hover:text-slate-950")}>
                   <span className={clsx("relative flex h-7 w-10 items-center justify-center rounded-lg transition", isActive ? "bg-brand-50" : "group-hover:bg-slate-100")}><item.icon className={clsx("h-[17px] w-[17px]", isActive && item.id === "feed" && "fill-brand-100")} /></span>
                   {item.label}
                   {isActive && <span className="absolute inset-x-3 bottom-0 h-0.5 rounded-full bg-brand-600" />}
@@ -59,19 +60,17 @@ export function AppHeader({ active, searchQuery, onSearchChange, searchPlacehold
             })}
           </nav>
 
-          <div className="relative hidden h-full min-w-10 md:block lg:min-w-[66px] xl:min-w-[74px]">
+          {signedIn && <div className="relative hidden h-full min-w-10 md:block lg:min-w-[66px] xl:min-w-[74px]">
             <button type="button" className="group flex h-full w-full flex-col items-center justify-center gap-1 px-1.5 text-[11px] font-bold text-slate-500 transition hover:text-slate-950" onClick={() => setNotificationsOpen((current) => !current)} aria-label="Notifikasi" aria-expanded={notificationsOpen}>
               <span className="relative flex h-7 w-10 items-center justify-center rounded-lg transition group-hover:bg-slate-100"><Bell className="h-[17px] w-[17px]" /><span className="absolute right-0.5 top-0 h-2 w-2 rounded-full border-2 border-white bg-rose-500" /></span>
               <span className="hidden lg:inline">Notifikasi</span>
             </button>
             {notificationsOpen && <HeaderNotifications />}
-          </div>
+          </div>}
 
-          <Link href="/profile" aria-label={active === "profile" ? "Profil aktif" : "Buka profil"} aria-current={active === "profile" ? "page" : undefined} className="relative ml-1 hidden h-full items-center gap-2 rounded-full px-1 hover:bg-slate-100 md:flex">
-            <Avatar src={currentUser.avatar} alt={currentUser.name} size="sm" online ring={active === "profile"} />
-            <ChevronDown className="mr-1 h-3.5 w-3.5 text-slate-400" />
-            {active === "profile" && <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-brand-600" />}
-          </Link>
+          {signedIn && <div className="relative z-30 ml-2 flex shrink-0 items-center md:ml-3 md:border-l md:border-slate-200 md:pl-3">
+            <AccountMenu active={active === "profile"} onOpen={() => setNotificationsOpen(false)} />
+          </div>}
         </div>
       </div>
     </header>

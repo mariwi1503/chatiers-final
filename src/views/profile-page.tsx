@@ -30,6 +30,7 @@ import { useEffect, useRef, useState, type RefObject } from "react";
 import clsx from "clsx";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useAuth } from "@/components/auth-provider";
 import { Avatar } from "@/components/avatar";
 import { AppHeader } from "@/components/app-header";
 import { MobileBottomNav } from "@/components/mobile-bottom-nav";
@@ -62,6 +63,7 @@ function scrollToTop() {
 
 /** Without `user` this renders the signed-in user's editable profile; with it, someone else's profile. */
 export function ProfilePage({ user }: { user?: UserProfile }) {
+  const { requireSession, user: sessionUser } = useAuth();
   const isOwner = !user;
   const { posts, products: ownProducts } = useStorefront();
   const router = useRouter();
@@ -70,7 +72,7 @@ export function ProfilePage({ user }: { user?: UserProfile }) {
   const [connected, setConnected] = useState(false);
   const [newProductRequest, setNewProductRequest] = useState(0);
   const [ownState, setOwnState] = useState<ProfileState>({
-    name: ownProfile.name,
+    name: sessionUser?.name ?? ownProfile.name,
     handle: ownProfile.handle,
     role: ownProfile.role,
     bio: ownProfile.bio,
@@ -101,6 +103,7 @@ export function ProfilePage({ user }: { user?: UserProfile }) {
   }
 
   function toggleConnect() {
+    if (!requireSession()) return;
     setConnected((value) => !value);
     showToast(connected ? "Permintaan koneksi dibatalkan" : `Permintaan koneksi dikirim ke ${profile.name}`);
   }
